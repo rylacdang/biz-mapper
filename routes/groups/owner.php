@@ -5,5 +5,5 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:'.UserRole::OWNER->value)->prefix('owner')->name('owner.')
     ->group(function () {
-
+        Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
     });
