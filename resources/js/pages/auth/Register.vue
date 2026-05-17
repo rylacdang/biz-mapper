@@ -90,23 +90,30 @@ defineOptions({
             </div>
 
             <div class="grid gap-2">
-                <Label for="role">Account Type</Label>
+                <Label for="role">Are you here to promote your business?</Label>
                 <select
                     id="role"
                     required
                     :tabindex="5"
                     name="role"
-                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                    <option value="consumer" class="bg-background text-foreground">Consumer (Browse & Review)</option>
-                    <option value="owner" class="bg-background text-foreground">Business Owner (Register Business)</option>
+                    <option
+                        value="consumer"
+                        class="bg-background text-foreground"
+                    >
+                        No, I want to browse and review
+                    </option>
+                    <option value="owner" class="bg-background text-foreground">
+                        Yes, I want to list my business
+                    </option>
                 </select>
                 <InputError :message="errors.role" />
             </div>
 
             <Button
                 type="submit"
-                class="mt-2 w-full animate-fade-in"
+                class="animate-fade-in mt-2 w-full"
                 :tabindex="6"
                 :disabled="processing"
                 data-test="register-user-button"
