@@ -89,10 +89,25 @@ defineOptions({
                 <InputError :message="errors.password_confirmation" />
             </div>
 
+            <div class="grid gap-2">
+                <Label for="role">Account Type</Label>
+                <select
+                    id="role"
+                    required
+                    :tabindex="5"
+                    name="role"
+                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <option value="consumer" class="bg-background text-foreground">Consumer (Browse & Review)</option>
+                    <option value="owner" class="bg-background text-foreground">Business Owner (Register Business)</option>
+                </select>
+                <InputError :message="errors.role" />
+            </div>
+
             <Button
                 type="submit"
-                class="mt-2 w-full"
-                tabindex="5"
+                class="mt-2 w-full animate-fade-in"
+                :tabindex="6"
                 :disabled="processing"
                 data-test="register-user-button"
             >
@@ -106,7 +121,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="6"
+                :tabindex="7"
                 >Log in</TextLink
             >
         </div>
