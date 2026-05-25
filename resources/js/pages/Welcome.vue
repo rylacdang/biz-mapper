@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { onMounted, ref, computed, nextTick } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
 import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
@@ -38,87 +38,12 @@ const {
 const isCreateModalOpen = ref(false);
 const currentTab = ref('general');
 
-// Categories Fallbacks Centered on Philippine Cities
-const defaultCategories = [
-    {
-        id: 'all',
-        name: 'All Services',
-        icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
-        color: '#185FA5',
-    },
-    {
-        id: 'food',
-        name: 'Food & Cafes',
-        icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-        color: '#1D9E75',
-    },
-    {
-        id: 'retail',
-        name: 'Retail Shops',
-        icon: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
-        color: '#0F6E56',
-    },
-    {
-        id: 'services',
-        name: 'Services',
-        icon: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
-        color: '#378ADD',
-    },
-    {
-        id: 'accommodation',
-        name: 'Hotels',
-        icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
-        color: '#EF9F27',
-    },
-];
-
-const defaultListings = [
-    {
-        id: 1,
-        name: 'Manila Bay Artisanal Cafe',
-        category: 'food',
-        lat: 14.5995,
-        lng: 120.9842,
-        rating: 4.8,
-        reviewsCount: 42,
-        color: '#1D9E75',
-        description:
-            'Freshly brewed local coffees & handcrafted pastries by the bay.',
-    },
-    {
-        id: 2,
-        name: 'Sugbo Seafood Bistro',
-        category: 'food',
-        lat: 10.3157,
-        lng: 123.8854,
-        rating: 4.6,
-        reviewsCount: 28,
-        color: '#1D9E75',
-        description: 'Fresh ocean catch served in a cozy atmosphere.',
-    },
-    {
-        id: 3,
-        name: 'Davao Durian Retail Hub',
-        category: 'retail',
-        lat: 7.1907,
-        lng: 125.4553,
-        rating: 4.9,
-        reviewsCount: 65,
-        color: '#0F6E56',
-        description: 'Premium durian products and local treats.',
-    },
-];
-
 const categoriesList = computed(() => {
-    return props.categories && props.categories.length > 0
-        ? props.categories
-        : defaultCategories;
+    return props.categories ?? [];
 });
 
 const listingsList = computed(() => {
-    return props.allBusinesses && props.allBusinesses.length > 0
-        ? props.allBusinesses
-        : defaultListings;
+    return props.allBusinesses ?? [];
 });
 
 const page = usePage();
