@@ -61,6 +61,48 @@ const submitBusinessForm = () => {
     });
 };
 
+const handleNextStep = () => {
+    form.clearErrors();
+    let isValid = true;
+
+    if (props.currentTab === 'general') {
+        if (!form.name || form.name.trim() === '') {
+            form.setError('name', 'Listing name is required.');
+            isValid = false;
+        }
+        if (!form.category_id) {
+            form.setError('category_id', 'Category is required.');
+            isValid = false;
+        }
+        if (!form.description || form.description.trim() === '') {
+            form.setError('description', 'Description is required.');
+            isValid = false;
+        } else if (form.description.trim().length < 10) {
+            form.setError('description', 'Description must be at least 10 characters.');
+            isValid = false;
+        }
+        if (!form.address || form.address.trim() === '') {
+            form.setError('address', 'Street address is required.');
+            isValid = false;
+        }
+
+        if (isValid) {
+            emit('tabChange', 'details');
+        }
+    } else if (props.currentTab === 'details') {
+        if (!form.cover_photo) {
+            form.setError('cover_photo', 'Cover photo banner is required.');
+            isValid = false;
+        }
+
+        if (isValid) {
+            emit('tabChange', 'schedule');
+        }
+    } else if (props.currentTab === 'schedule') {
+        emit('tabChange', 'position');
+    }
+};
+
 // Map States & Reference
 const modalMapContainer = ref<HTMLDivElement | null>(null);
 let L: any = null;
@@ -156,9 +198,9 @@ onUnmounted(() => {
         <!-- TAB 1: GENERAL INFO -->
         <div v-show="currentTab === 'general'" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300"
-                        >Listing Name *</label
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300"
+                        >Listing Name <span class="text-rose-500">*</span></label
                     >
                     <input
                         v-model="form.name"
@@ -174,8 +216,8 @@ onUnmounted(() => {
                         {{ form.errors.name }}
                     </span>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300">Category *</label>
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300">Category <span class="text-rose-500">*</span></label>
                     <select
                         v-model="form.category_id"
                         required
@@ -206,8 +248,8 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <div class="space-y-1.5">
-                <label class="font-bold text-gray-300">Description *</label>
+            <div class="space-y-2">
+                <label class="block font-bold text-gray-300">Description <span class="text-rose-500">*</span></label>
                 <textarea
                     v-model="form.description"
                     required
@@ -223,8 +265,8 @@ onUnmounted(() => {
                 </span>
             </div>
 
-            <div class="space-y-1.5">
-                <label class="font-bold text-gray-300">Street Address *</label>
+            <div class="space-y-2">
+                <label class="block font-bold text-gray-300">Street Address <span class="text-rose-500">*</span></label>
                 <input
                     v-model="form.address"
                     type="text"
@@ -244,8 +286,8 @@ onUnmounted(() => {
         <!-- TAB 2: DETAILS -->
         <div v-show="currentTab === 'details'" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300"
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300"
                         >Contact Number</label
                     >
                     <input
@@ -261,8 +303,8 @@ onUnmounted(() => {
                         {{ form.errors.phone }}
                     </span>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300"
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300"
                         >Website Address</label
                     >
                     <input
@@ -283,9 +325,9 @@ onUnmounted(() => {
             <div
                 class="grid grid-cols-1 gap-4 border-t border-gray-500/20 pt-4 sm:grid-cols-2"
             >
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300"
-                        >Cover Photo Banner * (Max 5MB)</label
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300"
+                        >Cover Photo Banner <span class="text-rose-500">*</span> (Max 5MB)</label
                     >
                     <div
                         class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"
@@ -326,8 +368,8 @@ onUnmounted(() => {
                         {{ form.errors.cover_photo }}
                     </span>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="font-bold text-gray-300"
+                <div class="space-y-2">
+                    <label class="block font-bold text-gray-300"
                         >Brand Logo (Max 2MB)</label
                     >
                     <div
@@ -483,16 +525,7 @@ onUnmounted(() => {
                 <button
                     v-show="currentTab !== 'position'"
                     type="button"
-                    @click="
-                        emit(
-                            'tabChange',
-                            currentTab === 'general'
-                                ? 'details'
-                                : currentTab === 'details'
-                                  ? 'schedule'
-                                  : 'position',
-                        )
-                    "
+                    @click="handleNextStep"
                     class="rounded-xl bg-primary px-5 py-2 font-bold text-white shadow transition hover:bg-primary-light"
                 >
                     Next Step
