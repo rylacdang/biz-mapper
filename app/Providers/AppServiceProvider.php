@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Repositories\Contracts\BusinessRepositoryInterface;
+use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Eloquents\BusinessRepository;
+use App\Repositories\Eloquents\CategoryRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(BusinessRepositoryInterface::class, BusinessRepository::class);
+        $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
     }
 
     /**
