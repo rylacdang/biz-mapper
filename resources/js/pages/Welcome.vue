@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
-import { onMounted, ref, computed } from 'vue';
+import { Head, usePage, router } from '@inertiajs/vue3';
+import { onMounted, ref, computed, watch } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
 import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
@@ -13,18 +13,20 @@ const props = withDefaults(
         categories?: Category[];
         allBusinesses?: Business[];
         myBusinesses?: Business[];
+        selectedCategory?: string | number;
     }>(),
     {
         canRegister: false,
         categories: () => [],
         allBusinesses: () => [],
         myBusinesses: () => [],
+        selectedCategory: 'all',
     },
 );
 
 // Map States
 const mapContainer = ref<HTMLDivElement | null>(null);
-const selectedCategory = ref<string | number>('all');
+const selectedCategory = ref<string | number>(props.selectedCategory);
 const {
     isMapLoaded,
     activeLayer,
@@ -49,6 +51,23 @@ const listingsList = computed(() => {
 const page = usePage();
 const isOwner = computed(() => page.props.auth?.user?.role === 'owner');
 
+// Watch selectedCategory prop from server to keep local ref in sync
+watch(
+    () => props.selectedCategory,
+    (newVal) => {
+        selectedCategory.value = newVal;
+    },
+);
+
+// Watch dynamic Inertia partial reload updates of listingsList to redraw pins
+watch(listingsList, () => {
+    renderMarkers(
+        categoriesList.value,
+        listingsList.value as ListingPin[],
+        selectedCategory,
+    );
+});
+
 onMounted(() => {
     initMap(
         categoriesList.value,
@@ -59,11 +78,14 @@ onMounted(() => {
 
 const handleCategoryFilter = (categoryId: string | number) => {
     selectedCategory.value = categoryId;
-    renderMarkers(
-        categoriesList.value,
-        listingsList.value as ListingPin[],
-        selectedCategory,
-    );
+
+    const params = categoryId === 'all' ? {} : { category: categoryId };
+
+    router.get(window.location.pathname, params, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['allBusinesses'],
+    });
 };
 
 const handleLayerToggle = (layer: string) => {

@@ -33,4 +33,17 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
             ->with('category')
             ->get();
     }
+
+    public function getByCategoryWithCategory(string $categoryName): Collection
+    {
+        $query = $this->query()->with('category');
+
+        if ($categoryName !== 'all') {
+            $query->whereHas('category', function ($q) use ($categoryName) {
+                $q->where('name', $categoryName);
+            });
+        }
+
+        return $query->get();
+    }
 }

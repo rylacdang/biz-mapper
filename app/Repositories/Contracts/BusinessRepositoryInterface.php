@@ -20,4 +20,9 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
      * Get businesses by user ID with category relation.
      */
     public function getByUserIdWithCategory(int|string $userId): Collection;
+
+    /**
+     * Get businesses by category with category relation.
+     */
+    public function getByCategoryWithCategory(string $categoryName): Collection;
 }

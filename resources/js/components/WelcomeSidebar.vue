@@ -145,10 +145,10 @@ const getIconComponent = (iconName: string) => {
                     <button
                         v-for="cat in categories"
                         :key="cat.id"
-                        @click="emit('filterCategory', cat.id)"
+                        @click="emit('filterCategory', cat.name)"
                         class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
                         :style="[
-                            selectedCategory === cat.id
+                            selectedCategory === cat.name
                                 ? {
                                       borderColor: cat.color,
                                       backgroundColor: cat.color + '20',
@@ -274,10 +274,10 @@ const getIconComponent = (iconName: string) => {
                     <button
                         v-for="cat in categories"
                         :key="cat.id"
-                        @click="emit('filterCategory', cat.id)"
+                        @click="emit('filterCategory', cat.name)"
                         class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
                         :style="[
-                            selectedCategory === cat.id
+                            selectedCategory === cat.name
                                 ? {
                                       borderColor: cat.color,
                                       backgroundColor: cat.color + '20',

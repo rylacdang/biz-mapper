@@ -78,7 +78,10 @@ const handleNextStep = () => {
             form.setError('description', 'Description is required.');
             isValid = false;
         } else if (form.description.trim().length < 10) {
-            form.setError('description', 'Description must be at least 10 characters.');
+            form.setError(
+                'description',
+                'Description must be at least 10 characters.',
+            );
             isValid = false;
         }
         if (!form.address || form.address.trim() === '') {
@@ -200,7 +203,8 @@ onUnmounted(() => {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2">
                     <label class="block font-bold text-gray-300"
-                        >Listing Name <span class="text-rose-500">*</span></label
+                        >Listing Name
+                        <span class="text-rose-500">*</span></label
                     >
                     <input
                         v-model="form.name"
@@ -217,7 +221,9 @@ onUnmounted(() => {
                     </span>
                 </div>
                 <div class="space-y-2">
-                    <label class="block font-bold text-gray-300">Category <span class="text-rose-500">*</span></label>
+                    <label class="block font-bold text-gray-300"
+                        >Category <span class="text-rose-500">*</span></label
+                    >
                     <select
                         v-model="form.category_id"
                         required
@@ -249,7 +255,9 @@ onUnmounted(() => {
             </div>
 
             <div class="space-y-2">
-                <label class="block font-bold text-gray-300">Description <span class="text-rose-500">*</span></label>
+                <label class="block font-bold text-gray-300"
+                    >Description <span class="text-rose-500">*</span></label
+                >
                 <textarea
                     v-model="form.description"
                     required
@@ -266,7 +274,9 @@ onUnmounted(() => {
             </div>
 
             <div class="space-y-2">
-                <label class="block font-bold text-gray-300">Street Address <span class="text-rose-500">*</span></label>
+                <label class="block font-bold text-gray-300"
+                    >Street Address <span class="text-rose-500">*</span></label
+                >
                 <input
                     v-model="form.address"
                     type="text"
@@ -327,7 +337,8 @@ onUnmounted(() => {
             >
                 <div class="space-y-2">
                     <label class="block font-bold text-gray-300"
-                        >Cover Photo Banner <span class="text-rose-500">*</span> (Max 5MB)</label
+                        >Cover Photo Banner
+                        <span class="text-rose-500">*</span> (Max 5MB)</label
                     >
                     <div
                         class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"

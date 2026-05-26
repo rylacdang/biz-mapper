@@ -81,18 +81,32 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
                 return;
             }
 
+            // Find matching category object first
+            const categoryObj = categories.find((c) => {
+                if (typeof listingCategory === 'object') {
+                    return (
+                        c.id === (listingCategory as any).id ||
+                        c.name === (listingCategory as any).name
+                    );
+                }
+                return (
+                    c.id === listingCategory ||
+                    c.id.toString() === listingCategory.toString()
+                );
+            });
+
+            if (!categoryObj) {
+                return;
+            }
+
+            // Filter markers by category name rather than ID
             if (
                 selectedCategory.value !== 'all' &&
-                listingCategory !== selectedCategory.value
+                categoryObj.name !== selectedCategory.value
             ) {
                 return;
             }
 
-            const categoryObj = categories.find(
-                (c) =>
-                    c.id === listingCategory ||
-                    c.id.toString() === listingCategory.toString(),
-            );
             const pinColor = categoryObj
                 ? categoryObj.color
                 : listing.color || '#185FA5';
