@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { dashboard, login, register, logout } from '@/routes';
 import type { Category, Business } from '@/types';
+import * as SolidIcons from '@heroicons/vue/24/solid';
 
 defineProps<{
     isOwner: boolean;
@@ -18,6 +19,10 @@ const emit = defineEmits<{
     (e: 'panTo', payload: { lat: number; lng: number }): void;
     (e: 'openCreateModal'): void;
 }>();
+
+const getIconComponent = (iconName: string) => {
+    return (SolidIcons as Record<string, any>)[iconName] || null;
+};
 </script>
 
 <template>
@@ -141,23 +146,28 @@ const emit = defineEmits<{
                         v-for="cat in categories"
                         :key="cat.id"
                         @click="emit('filterCategory', cat.id)"
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-200"
-                        :class="[
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
+                        :style="[
                             selectedCategory === cat.id
-                                ? 'border-gray-100 bg-gray-100 text-gray-900 shadow-lg shadow-gray-100/10'
-                                : 'border-gray-500/20 bg-gray-900/30 text-gray-500 hover:border-gray-500/40 hover:text-gray-100',
+                                ? {
+                                      borderColor: cat.color,
+                                      backgroundColor: cat.color + '20',
+                                      color: '#ffffff',
+                                      boxShadow:
+                                          '0 4px 12px ' + cat.color + '33',
+                                  }
+                                : {
+                                      borderColor: 'rgba(255, 255, 255, 0.05)',
+                                      color: '#9ca3af',
+                                  },
                         ]"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                        >
-                            <path :d="cat.icon" />
-                        </svg>
+                        <component
+                            v-if="getIconComponent(cat.icon)"
+                            :is="getIconComponent(cat.icon)"
+                            class="h-3.5 w-3.5"
+                            :style="{ color: cat.color }"
+                        />
                         {{ cat.name }}
                     </button>
                 </div>
@@ -265,23 +275,28 @@ const emit = defineEmits<{
                         v-for="cat in categories"
                         :key="cat.id"
                         @click="emit('filterCategory', cat.id)"
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-200"
-                        :class="[
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
+                        :style="[
                             selectedCategory === cat.id
-                                ? 'border-gray-100 bg-gray-100 text-gray-900 shadow-lg shadow-gray-100/10'
-                                : 'border-gray-500/20 bg-gray-900/30 text-gray-500 hover:border-gray-500/40 hover:text-gray-100',
+                                ? {
+                                      borderColor: cat.color,
+                                      backgroundColor: cat.color + '20',
+                                      color: '#ffffff',
+                                      boxShadow:
+                                          '0 4px 12px ' + cat.color + '33',
+                                  }
+                                : {
+                                      borderColor: 'rgba(255, 255, 255, 0.05)',
+                                      color: '#9ca3af',
+                                  },
                         ]"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                        >
-                            <path :d="cat.icon" />
-                        </svg>
+                        <component
+                            v-if="getIconComponent(cat.icon)"
+                            :is="getIconComponent(cat.icon)"
+                            class="h-3.5 w-3.5"
+                            :style="{ color: cat.color }"
+                        />
                         {{ cat.name }}
                     </button>
                 </div>

@@ -14,24 +14,59 @@ class CategorySeeder extends Seeder
     {
         $categories = [
             [
-                'name' => 'Food & Cafes',
-                'icon' => 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-                'color' => '#1D9E75',
+                'name' => 'Sari-Sari Store & Tindahan',
+                'icon' => 'BuildingStorefrontIcon',
+                'color' => '#F59E0B',
             ],
             [
-                'name' => 'Retail Shops',
-                'icon' => 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
-                'color' => '#0F6E56',
+                'name' => 'Carinderia & Eatery',
+                'icon' => 'FireIcon',
+                'color' => '#EF4444',
             ],
             [
-                'name' => 'Services',
-                'icon' => 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
-                'color' => '#378ADD',
+                'name' => 'Coffee Shops & Cafes',
+                'icon' => 'SparklesIcon',
+                'color' => '#8B5CF6',
             ],
             [
-                'name' => 'Hotels',
-                'icon' => 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
-                'color' => '#EF9F27',
+                'name' => 'Bakeries',
+                'icon' => 'CakeIcon',
+                'color' => '#EC4899',
+            ],
+            [
+                'name' => 'Palengke & Retail',
+                'icon' => 'ShoppingBagIcon',
+                'color' => '#10B981',
+            ],
+            [
+                'name' => 'Services & Repair',
+                'icon' => 'WrenchScrewdriverIcon',
+                'color' => '#3B82F6',
+            ],
+            [
+                'name' => 'Pharmacy & Botika',
+                'icon' => 'HeartIcon',
+                'color' => '#14B8A6',
+            ],
+            [
+                'name' => 'Hotels & Transient',
+                'icon' => 'HomeIcon',
+                'color' => '#6366F1',
+            ],
+            [
+                'name' => 'Barbershop & Salon',
+                'icon' => 'FaceSmileIcon',
+                'color' => '#F43F5E',
+            ],
+            [
+                'name' => 'Computer Shop & Tech',
+                'icon' => 'ComputerDesktopIcon',
+                'color' => '#0284C7',
+            ],
+            [
+                'name' => 'Bayad Center & Pawnshop',
+                'icon' => 'BanknotesIcon',
+                'color' => '#059669',
             ],
         ];
 
