@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquents;
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 class BusinessRepository extends BaseRepository implements BusinessRepositoryInterface
 {
@@ -44,5 +45,27 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         }
 
         return $query->get();
+    }
+
+    public function getTrashedByUserIdWithCategory(int|string $userId): Collection
+    {
+        return $this->query()
+            ->onlyTrashed()
+            ->where('user_id', $userId)
+            ->with('category')
+            ->get();
+    }
+
+    public function findTrashed(int|string $id): ?Model
+    {
+        return $this->query()
+            ->onlyTrashed()
+            ->find($id);
+    }
+
+    public function restoreBusiness(int|string $id): bool
+    {
+        $record = $this->findTrashed($id);
+        return $record ? $record->restore() : false;
     }
 }

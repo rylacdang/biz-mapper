@@ -4,6 +4,7 @@ import { onMounted, ref, computed, watch } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
 import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
 import BusinessEditForm from '@/components/owner/BusinessEditForm.vue';
+import BusinessTrashList from '@/components/owner/BusinessTrashList.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
 import { useLeafletMap } from '@/composables/useLeafletMap';
 import type { Category, Business, ListingPin } from '@/types';
@@ -15,6 +16,7 @@ const props = withDefaults(
         allBusinesses?: Business[];
         myBusinesses?: Business[];
         selectedCategory?: string | number;
+        trashBusinesses?: Business[];
     }>(),
     {
         canRegister: false,
@@ -22,6 +24,7 @@ const props = withDefaults(
         allBusinesses: () => [],
         myBusinesses: () => [],
         selectedCategory: 'all',
+        trashBusinesses: () => [],
     },
 );
 
@@ -40,6 +43,7 @@ const {
 // Modal and Form States
 const isCreateModalOpen = ref(false);
 const isEditModalOpen = ref(false);
+const isTrashModalOpen = ref(false);
 const selectedListing = ref<Business | null>(null);
 const currentTab = ref('general');
 const editTab = ref('general');
@@ -119,6 +123,17 @@ const handleCloseEditModal = () => {
     isEditModalOpen.value = false;
     selectedListing.value = null;
 };
+
+const handleOpenTrashModal = () => {
+    isTrashModalOpen.value = true;
+    router.reload({
+        only: ['trashBusinesses'],
+    });
+};
+
+const handleCloseTrashModal = () => {
+    isTrashModalOpen.value = false;
+};
 </script>
 
 <template>
@@ -162,6 +177,7 @@ const handleCloseEditModal = () => {
             @panTo="handlePanTo"
             @openCreateModal="handleOpenCreateModal"
             @openEditModal="handleOpenEditModal"
+            @openTrashModal="handleOpenTrashModal"
         />
 
         <!-- Create Listing Modal -->
@@ -197,6 +213,19 @@ const handleCloseEditModal = () => {
                 :listing="selectedListing"
                 @close="handleCloseEditModal"
                 @tabChange="(tab) => (editTab = tab)"
+            />
+        </BaseModal>
+
+        <!-- Recycle Bin (Trash) Modal -->
+        <BaseModal
+            :is-open="isTrashModalOpen"
+            title="Recycle Bin"
+            subtitle="View and restore your soft-deleted business directory listings."
+            @close="handleCloseTrashModal"
+        >
+            <BusinessTrashList
+                :trash-businesses="props.trashBusinesses"
+                @close="handleCloseTrashModal"
             />
         </BaseModal>
 

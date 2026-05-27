@@ -29,12 +29,14 @@ class OwnerDashboardController extends Controller
         $categories = $this->categoryRepo->all();
         $allBusinesses = $this->businessRepo->getByCategoryWithCategory($selectedCategory);
         $myBusinesses = $this->businessRepo->getByUserIdWithCategory(Auth::id());
+        $trashBusinesses = fn() => $this->businessRepo->getTrashedByUserIdWithCategory(Auth::id());
 
         return Inertia::render('Welcome', [
             'categories' => $categories,
             'allBusinesses' => $allBusinesses,
             'myBusinesses' => $myBusinesses,
             'selectedCategory' => $selectedCategory,
+            'trashBusinesses' => $trashBusinesses,
         ]);
     }
 }

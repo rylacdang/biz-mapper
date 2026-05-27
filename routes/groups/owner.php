@@ -11,4 +11,6 @@ Route::middleware('role:'.UserRole::OWNER->value)->prefix('owner')->name('owner.
 
         Route::post('business', [BusinessController::class, 'store'])->name('business.store');
         Route::put('business/{business}', [BusinessController::class, 'update'])->name('business.update');
+        Route::delete('business/{business}', [BusinessController::class, 'destroy'])->name('business.destroy');
+        Route::post('business/{id}/restore', [BusinessController::class, 'restore'])->name('business.restore');
     });

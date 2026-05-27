@@ -4,6 +4,7 @@ namespace App\Repositories\Caching;
 
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 class BusinessCacheRepository extends CacheBaseRepository implements BusinessRepositoryInterface
 {
@@ -40,5 +41,26 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
             "category.{$categoryName}.businesses",
             fn() => $this->eloquentRepo->getByCategoryWithCategory($categoryName)
         );
+    }
+
+    public function getTrashedByUserIdWithCategory(int|string $userId): Collection
+    {
+        return $this->eloquentRepo->getTrashedByUserIdWithCategory($userId);
+    }
+
+    public function findTrashed(int|string $id): ?Model
+    {
+        return $this->eloquentRepo->findTrashed($id);
+    }
+
+    public function restoreBusiness(int|string $id): bool
+    {
+        $restored = $this->eloquentRepo->restoreBusiness($id);
+
+        if ($restored) {
+            $this->flush();
+        }
+
+        return $restored;
     }
 }

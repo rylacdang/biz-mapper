@@ -19,6 +19,7 @@ const emit = defineEmits<{
     (e: 'panTo', payload: { lat: number; lng: number }): void;
     (e: 'openCreateModal'): void;
     (e: 'openEditModal', business: Business): void;
+    (e: 'openTrashModal'): void;
 }>();
 
 const getIconComponent = (iconName: string) => {
@@ -103,26 +104,48 @@ const getIconComponent = (iconName: string) => {
             </div>
 
             <!-- Add Listing Main Action Button -->
-            <button
-                @click="emit('openCreateModal')"
-                class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-center text-xs font-bold text-white shadow-lg shadow-primary/10 transition-all hover:bg-primary-light active:scale-98"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2.5"
+            <div class="flex items-center gap-2">
+                <button
+                    @click="emit('openCreateModal')"
+                    class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-center text-xs font-bold text-white shadow-lg shadow-primary/10 transition-all hover:bg-primary-light active:scale-98"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 4v16m8-8H4"
-                    />
-                </svg>
-                Register New Business
-            </button>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 4v16m8-8H4"
+                        />
+                    </svg>
+                    Register New Business
+                </button>
+                <button
+                    @click="emit('openTrashModal')"
+                    class="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 transition-all hover:bg-rose-500/20 hover:text-rose-300"
+                    title="Recycle Bin"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4.5 w-4.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                    </svg>
+                </button>
+            </div>
 
             <!-- Dynamic Category Chips Filter -->
             <div class="space-y-3 border-t border-gray-500/20 pt-4">

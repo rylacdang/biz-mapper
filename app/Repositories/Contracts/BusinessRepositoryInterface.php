@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 interface BusinessRepositoryInterface extends BaseRepositoryInterface
 {
@@ -25,4 +26,19 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
      * Get businesses by category with category relation.
      */
     public function getByCategoryWithCategory(string $categoryName): Collection;
+
+    /**
+     * Get all soft-deleted businesses for user.
+     */
+    public function getTrashedByUserIdWithCategory(int|string $userId): Collection;
+
+    /**
+     * Find soft-deleted business by ID.
+     */
+    public function findTrashed(int|string $id): ?Model;
+
+    /**
+     * Restore soft-deleted business.
+     */
+    public function restoreBusiness(int|string $id): bool;
 }
