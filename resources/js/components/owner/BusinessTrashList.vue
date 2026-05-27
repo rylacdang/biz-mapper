@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import type { Business } from '@/types';
 import { Trash2, RotateCcw } from 'lucide-vue-next';
+import type { Business } from '@/types';
 
 defineProps<{
     trashBusinesses: Business[];
-}>();
-
-const emit = defineEmits<{
-    (e: 'close'): void;
 }>();
 
 const handleRestore = (id: number) => {

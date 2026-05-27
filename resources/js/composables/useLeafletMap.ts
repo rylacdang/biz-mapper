@@ -107,6 +107,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
                         c.name === (listingCategory as any).name
                     );
                 }
+
                 return (
                     c.id === listingCategory ||
                     c.id.toString() === listingCategory.toString()

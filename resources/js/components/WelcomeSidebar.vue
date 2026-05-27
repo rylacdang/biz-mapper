@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import * as SolidIcons from '@heroicons/vue/24/solid';
 import { Link } from '@inertiajs/vue3';
+import { Trash2 } from 'lucide-vue-next';
 import { dashboard, login, register, logout } from '@/routes';
 import type { Category, Business } from '@/types';
-import * as SolidIcons from '@heroicons/vue/24/solid';
-import { Trash2 } from 'lucide-vue-next';
 
 defineProps<{
     isOwner: boolean;

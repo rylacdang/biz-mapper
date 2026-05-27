@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { Loader2 } from 'lucide-vue-next';
+import { ref, watch, nextTick, onUnmounted } from 'vue';
 import business from '@/routes/owner/business';
 import type { Category } from '@/types';
-import { Loader2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     currentTab: string;
@@ -41,6 +41,7 @@ const form = useForm({
 // Upload Handlers
 const handleCoverUpload = (e: Event) => {
     const target = e.target as HTMLInputElement;
+
     if (target.files && target.files[0]) {
         form.cover_photo = target.files[0];
     }
@@ -48,6 +49,7 @@ const handleCoverUpload = (e: Event) => {
 
 const handleLogoUpload = (e: Event) => {
     const target = e.target as HTMLInputElement;
+
     if (target.files && target.files[0]) {
         form.logo = target.files[0];
     }
@@ -71,10 +73,12 @@ const handleNextStep = () => {
             form.setError('name', 'Listing name is required.');
             isValid = false;
         }
+
         if (!form.category_id) {
             form.setError('category_id', 'Category is required.');
             isValid = false;
         }
+
         if (!form.description || form.description.trim() === '') {
             form.setError('description', 'Description is required.');
             isValid = false;
@@ -85,6 +89,7 @@ const handleNextStep = () => {
             );
             isValid = false;
         }
+
         if (!form.address || form.address.trim() === '') {
             form.setError('address', 'Street address is required.');
             isValid = false;
@@ -114,7 +119,9 @@ let modalMap: any = null;
 let modalMarker: any = null;
 
 const initModalMap = async () => {
-    if (!modalMapContainer.value) return;
+    if (!modalMapContainer.value) {
+return;
+}
 
     const LeafletModule = await import('leaflet');
     L = LeafletModule.default || LeafletModule;
