@@ -6,7 +6,6 @@ use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-
 class BusinessRepository extends BaseRepository implements BusinessRepositoryInterface
 {
     public function __construct(Business $business)
