@@ -26,14 +26,29 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         map = L.map(mapContainer.value, {
             center: [12.8797, 121.774],
             zoom: 6,
+            minZoom: 5,
+            maxZoom: 18,
             zoomControl: false,
         });
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+        // Low-res background layer — loads fast, covers entire view,
+        // eliminates white gaps while high-res tiles load on top
+        const backgroundLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                maxNativeZoom: 5,
+                maxZoom: 18,
+                minZoom: 5,
+            },
+        );
+        backgroundLayer.addTo(map);
+
         const satelliteLayer = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
+                maxZoom: 18,
                 attribution:
                     'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
             },
@@ -41,11 +56,13 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
 
         const labelsLayer = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            { maxZoom: 18 },
         );
 
         const streetLayer = L.tileLayer(
             'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
             {
+                maxZoom: 18,
                 attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
             },
         );
@@ -56,6 +73,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         (window as any).mapLayers = {
             satellite: hybridGroup,
             street: streetLayer,
+            background: backgroundLayer,
         };
 
         markerLayerGroup = L.layerGroup().addTo(map);
@@ -214,9 +232,11 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
 
         if (layer === 'satellite') {
             map.removeLayer(layers.street);
+            layers.background.addTo(map);
             layers.satellite.addTo(map);
         } else {
             map.removeLayer(layers.satellite);
+            map.removeLayer(layers.background);
             layers.street.addTo(map);
         }
     }

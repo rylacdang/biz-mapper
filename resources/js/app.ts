@@ -31,3 +31,10 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// Register tile-caching service worker for offline map tiles
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/tile-cache-sw.js').catch(() => {
+        // Silent fail — map still works without SW, just no tile caching
+    });
+}

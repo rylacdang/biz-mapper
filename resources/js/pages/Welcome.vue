@@ -156,7 +156,7 @@ const handleCloseTrashModal = () => {
         <!-- Leaflet Map Container -->
         <div
             ref="mapContainer"
-            class="absolute inset-0 z-0 h-full w-full"
+            class="absolute inset-0 z-0 h-full w-full bg-zinc-900"
         ></div>
 
         <!-- Sleek Dark Overlay gradient -->
