@@ -10,4 +10,5 @@ Route::middleware('role:'.UserRole::OWNER->value)->prefix('owner')->name('owner.
         Route::get('/dashboard', [OwnerDashboardController::class, 'index'])->name('dashboard');
 
         Route::post('business', [BusinessController::class, 'store'])->name('business.store');
+        Route::put('business/{business}', [BusinessController::class, 'update'])->name('business.update');
     });

@@ -3,6 +3,7 @@ import { Head, usePage, router } from '@inertiajs/vue3';
 import { onMounted, ref, computed, watch } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
 import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
+import BusinessEditForm from '@/components/owner/BusinessEditForm.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
 import { useLeafletMap } from '@/composables/useLeafletMap';
 import type { Category, Business, ListingPin } from '@/types';
@@ -38,7 +39,10 @@ const {
 
 // Modal and Form States
 const isCreateModalOpen = ref(false);
+const isEditModalOpen = ref(false);
+const selectedListing = ref<Business | null>(null);
 const currentTab = ref('general');
+const editTab = ref('general');
 
 const categoriesList = computed(() => {
     return props.categories ?? [];
@@ -104,6 +108,17 @@ const handleOpenCreateModal = () => {
 const handleCloseCreateModal = () => {
     isCreateModalOpen.value = false;
 };
+
+const handleOpenEditModal = (biz: Business) => {
+    selectedListing.value = biz;
+    editTab.value = 'general';
+    isEditModalOpen.value = true;
+};
+
+const handleCloseEditModal = () => {
+    isEditModalOpen.value = false;
+    selectedListing.value = null;
+};
 </script>
 
 <template>
@@ -146,9 +161,10 @@ const handleCloseCreateModal = () => {
             @toggleLayer="handleLayerToggle"
             @panTo="handlePanTo"
             @openCreateModal="handleOpenCreateModal"
+            @openEditModal="handleOpenEditModal"
         />
 
-        <!-- Reusable Glassmorphic Modal Popup -->
+        <!-- Create Listing Modal -->
         <BaseModal
             :is-open="isCreateModalOpen"
             title="Register Business Directory"
@@ -162,6 +178,25 @@ const handleCloseCreateModal = () => {
                 :categories-list="categoriesList"
                 @close="handleCloseCreateModal"
                 @tabChange="(tab) => (currentTab = tab)"
+            />
+        </BaseModal>
+
+        <!-- Edit Listing Modal -->
+        <BaseModal
+            :is-open="isEditModalOpen"
+            title="Edit Business Listing"
+            subtitle="Update your listing details. Leave photo fields empty to keep existing images."
+            :tabs="['general', 'details', 'schedule', 'position']"
+            v-model:currentTab="editTab"
+            @close="handleCloseEditModal"
+        >
+            <BusinessEditForm
+                v-if="selectedListing"
+                :current-tab="editTab"
+                :categories-list="categoriesList"
+                :listing="selectedListing"
+                @close="handleCloseEditModal"
+                @tabChange="(tab) => (editTab = tab)"
             />
         </BaseModal>
 
