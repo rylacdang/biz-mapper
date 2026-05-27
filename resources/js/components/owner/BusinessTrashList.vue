@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import type { Business } from '@/types';
+import { Trash2, RotateCcw } from 'lucide-vue-next';
 
 defineProps<{
     trashBusinesses: Business[];
@@ -31,20 +32,7 @@ const handleRestore = (id: number) => {
             v-if="!trashBusinesses || trashBusinesses.length === 0"
             class="flex flex-col items-center justify-center py-12 text-center text-gray-500"
         >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="mb-3 h-12 w-12 text-gray-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-            </svg>
+            <Trash2 class="mb-3 h-12 w-12 text-gray-600" />
             <p class="font-bold text-gray-400">Recycle Bin is Empty</p>
             <p class="mt-1 text-[10px]">No soft-deleted listings found.</p>
         </div>
@@ -85,20 +73,7 @@ const handleRestore = (id: number) => {
                     @click="handleRestore(biz.id)"
                     class="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 font-bold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:text-emerald-300 active:scale-95"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"
-                        />
-                    </svg>
+                    <RotateCcw class="h-3.5 w-3.5" />
                     Restore
                 </button>
             </div>
