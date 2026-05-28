@@ -120,8 +120,8 @@ let modalMarker: any = null;
 
 const initModalMap = async () => {
     if (!modalMapContainer.value) {
-return;
-}
+        return;
+    }
 
     const LeafletModule = await import('leaflet');
     L = LeafletModule.default || LeafletModule;

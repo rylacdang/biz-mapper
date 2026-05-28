@@ -249,7 +249,9 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
     }
 
     function showUserLocation(lat: number, lng: number) {
-        if (!L || !map) return;
+        if (!L || !map) {
+return;
+}
 
         const locationHtml = `
             <div class="relative flex items-center justify-center" style="width: 60px; height: 60px;">
@@ -270,7 +272,10 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
             iconAnchor: [30, 30],
         });
 
-        const marker = L.marker([lat, lng], { icon: userIcon, interactive: true }).addTo(map);
+        const marker = L.marker([lat, lng], {
+            icon: userIcon,
+            interactive: true,
+        }).addTo(map);
         marker.bindPopup(
             `<div class="p-2 text-center font-sans">
                 <p class="text-xs font-bold text-zinc-800">📍 You are here</p>
