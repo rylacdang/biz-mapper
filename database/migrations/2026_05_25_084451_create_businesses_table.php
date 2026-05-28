@@ -31,6 +31,13 @@ return new class extends Migration
             $table->unsignedInteger('view_count')->default(0);
             $table->softDeletes();
             $table->timestamps();
+
+            // Composite index for geospatial bounding box queries
+            $table->index(['lat', 'lng']);
+            $table->index('category_id');
+            $table->index('status');
+            $table->index('user_id');
+            $table->index('name');
         });
     }
 
