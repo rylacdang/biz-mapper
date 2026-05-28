@@ -250,8 +250,8 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
 
     function showUserLocation(lat: number, lng: number) {
         if (!L || !map) {
-return;
-}
+            return;
+        }
 
         const locationHtml = `
             <div class="relative flex items-center justify-center" style="width: 60px; height: 60px;">

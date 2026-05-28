@@ -68,8 +68,8 @@ export function useProximitySearch({
                 params.set('radius', radius.toString());
 
                 if (keyword) {
-params.set('keyword', keyword);
-}
+                    params.set('keyword', keyword);
+                }
 
                 window.history.replaceState(
                     {},
