@@ -242,10 +242,41 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         }
     }
 
-    function panToLocation(lat: number, lng: number) {
+    function panToLocation(lat: number, lng: number, zoom: number = 15) {
         if (map) {
-            map.setView([lat, lng], 15, { animate: true, duration: 1.5 });
+            map.setView([lat, lng], zoom, { animate: true, duration: 1.5 });
         }
+    }
+
+    function showUserLocation(lat: number, lng: number) {
+        if (!L || !map) return;
+
+        const locationHtml = `
+            <div class="relative flex items-center justify-center" style="width: 60px; height: 60px;">
+                <span class="absolute inline-flex h-14 w-14 animate-ping rounded-full bg-cyan-400 opacity-25"></span>
+                <span class="absolute inline-flex h-10 w-10 rounded-full bg-cyan-400/20 border border-cyan-400/40"></span>
+                <div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 border-[3px] border-white shadow-[0_0_15px_rgba(34,211,238,0.6)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        `;
+
+        const userIcon = L.divIcon({
+            html: locationHtml,
+            className: 'user-location-icon',
+            iconSize: [60, 60],
+            iconAnchor: [30, 30],
+        });
+
+        const marker = L.marker([lat, lng], { icon: userIcon, interactive: true }).addTo(map);
+        marker.bindPopup(
+            `<div class="p-2 text-center font-sans">
+                <p class="text-xs font-bold text-zinc-800">📍 You are here</p>
+            </div>`,
+            { closeButton: false, className: 'custom-leaflet-popup' },
+        );
     }
 
     function getMapCenter() {
@@ -259,6 +290,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         renderMarkers,
         toggleLayer,
         panToLocation,
+        showUserLocation,
         getMapCenter,
     };
 }

@@ -39,6 +39,7 @@ const {
     renderMarkers,
     toggleLayer,
     panToLocation,
+    showUserLocation,
     getMapCenter,
 } = useLeafletMap(mapContainer);
 
@@ -84,6 +85,21 @@ onMounted(() => {
         listingsList.value as ListingPin[],
         selectedCategory,
     );
+
+    // Ask for user location to pan map to their area
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                panToLocation(latitude, longitude, 13);
+                showUserLocation(latitude, longitude);
+            },
+            () => {
+                // Denied or timeout — stay at default Philippines view
+            },
+            { timeout: 8000, enableHighAccuracy: false },
+        );
+    }
 });
 
 const handleCategoryFilter = (categoryId: string | number) => {
@@ -191,8 +207,10 @@ const handleSearchProximity = async ({
                     ref('all'),
                 );
 
-                // Pan map view to search reference coordinate
-                panToLocation(latitude, longitude);
+                // Pan to first result if available, otherwise stay put
+                if (data.data.length > 0) {
+                    panToLocation(data.data[0].lat, data.data[0].lng);
+                }
             }
         } catch (error) {
             console.error('Geospatial proximity search failed:', error);
