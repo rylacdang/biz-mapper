@@ -68,6 +68,51 @@ class CategorySeeder extends Seeder
                 'icon' => 'BanknotesIcon',
                 'color' => '#059669',
             ],
+            [
+                'name' => 'Fast Food & Restaurant',
+                'icon' => 'TruckIcon',
+                'color' => '#DC2626',
+            ],
+            [
+                'name' => 'School & Tutorial Center',
+                'icon' => 'AcademicCapIcon',
+                'color' => '#7C3AED',
+            ],
+            [
+                'name' => 'KTV & Entertainment',
+                'icon' => 'MusicalNoteIcon',
+                'color' => '#D946EF',
+            ],
+            [
+                'name' => 'Grocery & Supermarket',
+                'icon' => 'ShoppingCartIcon',
+                'color' => '#16A34A',
+            ],
+            [
+                'name' => 'Laundry & Dry Cleaning',
+                'icon' => 'ScissorsIcon',
+                'color' => '#0891B2',
+            ],
+            [
+                'name' => 'Condo & Real Estate',
+                'icon' => 'BuildingOffice2Icon',
+                'color' => '#475569',
+            ],
+            [
+                'name' => 'Printing & Graphics',
+                'icon' => 'PaintBrushIcon',
+                'color' => '#EA580C',
+            ],
+            [
+                'name' => 'Travel & Tours',
+                'icon' => 'GlobeAltIcon',
+                'color' => '#0D9488',
+            ],
+            [
+                'name' => 'Internet & WiFi Cafe',
+                'icon' => 'WifiIcon',
+                'color' => '#2563EB',
+            ],
         ];
 
         foreach ($categories as $cat) {
