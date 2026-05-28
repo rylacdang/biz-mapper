@@ -63,4 +63,14 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
 
         return $restored;
     }
+
+    public function searchByRadius(
+        float $latitude,
+        float $longitude,
+        float $radius,
+        ?string $keyword = null,
+        ?string $category = null
+    ): Collection {
+        return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category);
+    }
 }

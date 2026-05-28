@@ -68,4 +68,58 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         $record = $this->findTrashed($id);
         return $record ? $record->restore() : false;
     }
+
+    public function searchByRadius(
+        float $latitude,
+        float $longitude,
+        float $radius,
+        ?string $keyword = null,
+        ?string $category = null
+    ): Collection {
+        $earthRadius = 6371;
+
+        $query = $this->query()->with('category');
+
+        // If keyword is provided, search globally by name/description first
+        // Only apply radius constraint when no keyword is given
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                    ->orWhere('description', 'like', "%{$keyword}%");
+            });
+        } else {
+            // Calculate Bounding Box coordinates (Pre-filter to prevent full table scan)
+            $latDelta = rad2deg($radius / $earthRadius);
+            $lngDelta = rad2deg($radius / $earthRadius / cos(deg2rad($latitude)));
+
+            $minLat = $latitude - $latDelta;
+            $maxLat = $latitude + $latDelta;
+            $minLng = $longitude - $lngDelta;
+            $maxLng = $longitude + $lngDelta;
+
+            $query->whereBetween('lat', [$minLat, $maxLat])
+                ->whereBetween('lng', [$minLng, $maxLng]);
+        }
+
+        // Category filter
+        if ($category && $category !== 'all') {
+            $query->whereHas('category', function ($q) use ($category) {
+                $q->where('name', $category)
+                    ->orWhere('id', $category);
+            });
+        }
+
+        // Calculate exact Haversine Distance in Kilometers
+        $distanceFormula = "{$earthRadius} * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))";
+
+        $query->select('*')
+            ->selectRaw("({$distanceFormula}) AS distance", [$latitude, $longitude, $latitude]);
+
+        // Only enforce radius limit when no keyword (proximity-only search)
+        if (! $keyword) {
+            $query->having('distance', '<=', $radius);
+        }
+
+        return $query->orderBy('distance', 'asc')->get();
+    }
 }

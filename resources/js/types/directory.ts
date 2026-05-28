@@ -23,6 +23,7 @@ export interface Business {
     rating?: number;
     reviewsCount?: number;
     color?: string;
+    distance?: number;
 }
 
 export interface ListingPin extends Omit<Business, 'category_id'> {

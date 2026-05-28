@@ -248,6 +248,10 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         }
     }
 
+    function getMapCenter() {
+        return map ? map.getCenter() : null;
+    }
+
     return {
         isMapLoaded,
         activeLayer,
@@ -255,5 +259,6 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         renderMarkers,
         toggleLayer,
         panToLocation,
+        getMapCenter,
     };
 }

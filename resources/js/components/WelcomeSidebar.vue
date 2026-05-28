@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import * as SolidIcons from '@heroicons/vue/24/solid';
 import { Link } from '@inertiajs/vue3';
-import { Trash2 } from 'lucide-vue-next';
+import { Trash2, Search } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { dashboard, login, register, logout } from '@/routes';
 import type { Category, Business } from '@/types';
 
-defineProps<{
-    isOwner: boolean;
-    canRegister: boolean;
-    categories: Category[];
-    myBusinesses: Business[];
-    selectedCategory: string | number;
-    activeLayer: string;
-}>();
+withDefaults(
+    defineProps<{
+        isOwner: boolean;
+        canRegister: boolean;
+        categories: Category[];
+        myBusinesses: Business[];
+        selectedCategory: string | number;
+        activeLayer: string;
+        searchResults?: Business[];
+        isNearbySearchActive?: boolean;
+    }>(),
+    {
+        searchResults: () => [],
+        isNearbySearchActive: false,
+    },
+);
 
 const emit = defineEmits<{
     (e: 'filterCategory', categoryId: string | number): void;
@@ -21,7 +30,19 @@ const emit = defineEmits<{
     (e: 'openCreateModal'): void;
     (e: 'openEditModal', business: Business): void;
     (e: 'openTrashModal'): void;
+    (e: 'searchProximity', payload: { radius: number; keyword: string }): void;
+    (e: 'resetSearch'): void;
 }>();
+
+const searchRadius = ref(5);
+const searchKeyword = ref('');
+
+const triggerSearch = () => {
+    emit('searchProximity', {
+        radius: searchRadius.value,
+        keyword: searchKeyword.value,
+    });
+};
 
 const getIconComponent = (iconName: string) => {
     return (SolidIcons as Record<string, any>)[iconName] || null;
@@ -274,90 +295,202 @@ const getIconComponent = (iconName: string) => {
                 </p>
             </div>
 
-            <!-- Sleek Input Concept Search -->
-            <div class="relative">
-                <input
-                    type="text"
-                    placeholder="Search cafes, shops, hotels..."
-                    class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-4 py-2.5 text-xs text-gray-100 placeholder-gray-500 transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                />
-                <span class="absolute top-3 right-3.5 text-gray-500">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                    </svg>
-                </span>
-            </div>
-
-            <!-- Category Chips Filter -->
-            <div class="space-y-3">
+            <!-- Proximity & Keyword Search -->
+            <div class="space-y-3 border-t border-gray-500/10 pt-4">
                 <h3
                     class="text-[10px] font-bold tracking-widest text-gray-500 uppercase"
                 >
-                    Filter by Category
+                    Proximity Directory Search
                 </h3>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="cat in categories"
-                        :key="cat.id"
-                        @click="emit('filterCategory', cat.name)"
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
-                        :style="[
-                            selectedCategory === cat.name
-                                ? {
-                                      borderColor: cat.color,
-                                      backgroundColor: cat.color + '20',
-                                      color: '#ffffff',
-                                      boxShadow:
-                                          '0 4px 12px ' + cat.color + '33',
-                                  }
-                                : {
-                                      borderColor: 'rgba(255, 255, 255, 0.05)',
-                                      color: '#9ca3af',
-                                  },
-                        ]"
-                    >
-                        <component
-                            v-if="getIconComponent(cat.icon)"
-                            :is="getIconComponent(cat.icon)"
-                            class="h-3.5 w-3.5"
-                            :style="{ color: cat.color }"
+                <div class="relative flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input
+                            v-model="searchKeyword"
+                            type="text"
+                            placeholder="Search cafe, shop, name..."
+                            class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3.5 py-2 text-xs text-gray-100 placeholder-gray-500 focus:border-primary focus:outline-none"
+                            @keyup.enter="triggerSearch"
                         />
-                        {{ cat.name }}
+                    </div>
+                    <button
+                        @click="triggerSearch"
+                        class="flex h-[32px] w-[32px] items-center justify-center rounded-xl bg-primary text-white transition-all hover:bg-primary-light active:scale-95"
+                        title="Search Proximity"
+                    >
+                        <Search class="h-4 w-4" />
                     </button>
+                </div>
+
+                <div class="space-y-2">
+                    <div
+                        class="flex items-center justify-between text-[9px] font-bold tracking-wider text-gray-500 uppercase"
+                    >
+                        <span>Distance Radius</span>
+                        <span class="font-mono font-bold text-primary-light"
+                            >{{ searchRadius }} km</span
+                        >
+                    </div>
+                    <div
+                        class="flex items-center gap-1 rounded-xl border border-gray-500/10 bg-gray-900/40 p-1"
+                    >
+                        <button
+                            v-for="r in [1, 5, 10, 25, 50]"
+                            :key="r"
+                            type="button"
+                            @click="searchRadius = r"
+                            class="flex-1 rounded-lg py-1 text-[10px] font-bold tracking-wider transition-all duration-150"
+                            :class="
+                                searchRadius === r
+                                    ? 'bg-primary text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200'
+                            "
+                        >
+                            {{ r }}km
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Stats/Info panel -->
-            <div
-                class="mt-auto grid grid-cols-2 gap-4 border-t border-gray-500/20 pt-4"
-            >
-                <div>
-                    <span class="block text-xs font-extrabold text-gray-100"
-                        >12,879+</span
+            <!-- Proximity Search Results Panel -->
+            <template v-if="isNearbySearchActive">
+                <div
+                    class="flex-1 space-y-3 overflow-y-auto border-t border-gray-500/20 pt-4"
+                >
+                    <div class="flex items-center justify-between">
+                        <h3
+                            class="text-[10px] font-bold tracking-widest text-gray-500 uppercase"
+                        >
+                            Proximity Results ({{ searchResults.length }})
+                        </h3>
+                        <button
+                            @click="emit('resetSearch')"
+                            class="text-[9px] font-bold tracking-wider text-rose-400 uppercase transition-all hover:text-rose-300"
+                        >
+                            Reset
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="searchResults.length === 0"
+                        class="rounded-xl border border-dashed border-gray-500/20 bg-gray-900/30 p-6 text-center"
                     >
-                    <span
-                        class="text-[9px] font-semibold text-gray-500 uppercase"
-                        >Active listings</span
-                    >
+                        <p class="text-xs leading-relaxed text-gray-500">
+                            No businesses found in this area. Try increasing
+                            search radius.
+                        </p>
+                    </div>
+                    <div v-else class="space-y-2">
+                        <div
+                            v-for="biz in searchResults"
+                            :key="biz.id"
+                            @click="
+                                emit('panTo', { lat: biz.lat, lng: biz.lng })
+                            "
+                            class="group flex cursor-pointer items-center gap-3 rounded-xl border border-gray-500/20 bg-gray-900/30 p-2.5 transition duration-200 hover:border-gray-500/40 hover:bg-gray-900/50"
+                        >
+                            <div
+                                class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-800"
+                            >
+                                <img
+                                    :src="
+                                        biz.cover_photo
+                                            ? '/storage/' + biz.cover_photo
+                                            : '/img/placeholder.jpg'
+                                    "
+                                    class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4
+                                        class="truncate text-xs font-bold text-gray-200 group-hover:text-white"
+                                    >
+                                        {{ biz.name }}
+                                    </h4>
+                                    <span
+                                        v-if="biz.distance !== undefined"
+                                        class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[8px] font-bold text-indigo-300"
+                                    >
+                                        {{ biz.distance }} km
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-0.5 truncate text-[10px] font-normal text-gray-500"
+                                >
+                                    {{ biz.address }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <span class="block text-xs font-extrabold text-gray-100"
-                        >48,290+</span
+            </template>
+
+            <!-- Standard Category Filter & Stats (Only shown when not searching) -->
+            <template v-else>
+                <!-- Category Chips Filter -->
+                <div class="space-y-3 border-t border-gray-500/10 pt-4">
+                    <h3
+                        class="text-[10px] font-bold tracking-widest text-gray-500 uppercase"
                     >
-                    <span
-                        class="text-[9px] font-semibold text-gray-500 uppercase"
-                        >AI review outputs</span
-                    >
+                        Filter by Category
+                    </h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="cat in categories"
+                            :key="cat.id"
+                            @click="emit('filterCategory', cat.name)"
+                            class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
+                            :style="[
+                                selectedCategory === cat.name
+                                    ? {
+                                          borderColor: cat.color,
+                                          backgroundColor: cat.color + '20',
+                                          color: '#ffffff',
+                                          boxShadow:
+                                              '0 4px 12px ' + cat.color + '33',
+                                      }
+                                    : {
+                                          borderColor:
+                                              'rgba(255, 255, 255, 0.05)',
+                                          color: '#9ca3af',
+                                      },
+                            ]"
+                        >
+                            <component
+                                v-if="getIconComponent(cat.icon)"
+                                :is="getIconComponent(cat.icon)"
+                                class="h-3.5 w-3.5"
+                                :style="{ color: cat.color }"
+                            />
+                            {{ cat.name }}
+                        </button>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Stats/Info panel -->
+                <div
+                    class="mt-auto grid grid-cols-2 gap-4 border-t border-gray-500/20 pt-4"
+                >
+                    <div>
+                        <span class="block text-xs font-extrabold text-gray-100"
+                            >12,879+</span
+                        >
+                        <span
+                            class="text-[9px] font-semibold text-gray-500 uppercase"
+                            >Active listings</span
+                        >
+                    </div>
+                    <div>
+                        <span class="block text-xs font-extrabold text-gray-100"
+                            >48,290+</span
+                        >
+                        <span
+                            class="text-[9px] font-semibold text-gray-500 uppercase"
+                            >AI review outputs</span
+                        >
+                    </div>
+                </div>
+            </template>
 
             <!-- Auth Buttons inside Sidebar Footer -->
             <nav class="flex flex-col gap-2 border-t border-gray-500/20 pt-4">

@@ -41,4 +41,15 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
      * Restore soft-deleted business.
      */
     public function restoreBusiness(int|string $id): bool;
+
+    /**
+     * Search businesses inside a bounding box pre-filter sorted by Haversine distance.
+     */
+    public function searchByRadius(
+        float $latitude,
+        float $longitude,
+        float $radius,
+        ?string $keyword = null,
+        ?string $category = null
+    ): Collection;
 }
