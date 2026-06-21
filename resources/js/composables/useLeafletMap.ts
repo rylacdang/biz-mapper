@@ -41,6 +41,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
                 maxNativeZoom: 5,
                 maxZoom: 18,
                 minZoom: 5,
+                crossOrigin: true,
             },
         );
         backgroundLayer.addTo(map);
@@ -49,6 +50,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
                 maxZoom: 18,
+                crossOrigin: true,
                 attribution:
                     'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
             },
@@ -56,13 +58,14 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
 
         const labelsLayer = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-            { maxZoom: 18 },
+            { maxZoom: 18, crossOrigin: true },
         );
 
         const streetLayer = L.tileLayer(
             'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
             {
                 maxZoom: 18,
+                crossOrigin: true,
                 attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
             },
         );

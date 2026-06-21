@@ -61,6 +61,10 @@ self.addEventListener('fetch', (event) => {
 
                 return networkResponse;
             } catch (error) {
+                // If the request was aborted, propagate the error so Leaflet knows it was cancelled
+                if (error.name === 'AbortError') {
+                    throw error;
+                }
                 // Network failed and no cache — return a transparent 1x1 pixel
                 return new Response(
                     Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRU5ErkJggg=='), c => c.charCodeAt(0)),

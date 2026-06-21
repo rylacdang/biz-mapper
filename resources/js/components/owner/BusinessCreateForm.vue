@@ -211,7 +211,7 @@ const initModalMap = async () => {
 
     L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        { attribution: '&copy; CARTO' },
+        { attribution: '&copy; CARTO', crossOrigin: true },
     ).addTo(modalMap);
 
     const iconHtml = `
