@@ -80,25 +80,24 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
 
         $query = $this->query()->with('category');
 
-        // If keyword is provided, search globally by name/description first
-        // Only apply radius constraint when no keyword is given
+        // Calculate Bounding Box coordinates (Pre-filter to prevent full table scan)
+        $latDelta = rad2deg($radius / $earthRadius);
+        $lngDelta = rad2deg($radius / $earthRadius / cos(deg2rad($latitude)));
+
+        $minLat = $latitude - $latDelta;
+        $maxLat = $latitude + $latDelta;
+        $minLng = $longitude - $lngDelta;
+        $maxLng = $longitude + $lngDelta;
+
+        $query->whereBetween('lat', [$minLat, $maxLat])
+            ->whereBetween('lng', [$minLng, $maxLng]);
+
+        // If keyword is provided, filter by keyword (name or description)
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('description', 'like', "%{$keyword}%");
             });
-        } else {
-            // Calculate Bounding Box coordinates (Pre-filter to prevent full table scan)
-            $latDelta = rad2deg($radius / $earthRadius);
-            $lngDelta = rad2deg($radius / $earthRadius / cos(deg2rad($latitude)));
-
-            $minLat = $latitude - $latDelta;
-            $maxLat = $latitude + $latDelta;
-            $minLng = $longitude - $lngDelta;
-            $maxLng = $longitude + $lngDelta;
-
-            $query->whereBetween('lat', [$minLat, $maxLat])
-                ->whereBetween('lng', [$minLng, $maxLng]);
         }
 
         // Category filter
@@ -115,10 +114,8 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         $query->select('*')
             ->selectRaw("({$distanceFormula}) AS distance", [$latitude, $longitude, $latitude]);
 
-        // Only enforce radius limit when no keyword (proximity-only search)
-        if (! $keyword) {
-            $query->having('distance', '<=', $radius);
-        }
+        // Always enforce the proximity radius constraint
+        $query->having('distance', '<=', $radius);
 
         return $query->orderBy('distance', 'asc')->get();
     }

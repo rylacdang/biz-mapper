@@ -2,7 +2,7 @@
 import * as SolidIcons from '@heroicons/vue/24/solid';
 import { Link } from '@inertiajs/vue3';
 import { Trash2, Search, ChevronDown } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { dashboard, login, register, logout } from '@/routes';
 import type { Category, Business } from '@/types';
@@ -40,6 +40,7 @@ const emit = defineEmits<{
     (e: 'searchProximity', payload: { radius: number; keyword: string }): void;
     (e: 'resetSearch'): void;
     (e: 'openCategoryExplorer'): void;
+    (e: 'radiusChanged', radius: number): void;
 }>();
 
 const searchRadius = ref(5);
@@ -51,6 +52,14 @@ const triggerSearch = () => {
         keyword: searchKeyword.value,
     });
 };
+
+watch(searchRadius, (newRadius) => {
+    if (props.isNearbySearchActive) {
+        triggerSearch();
+    } else {
+        emit('radiusChanged', newRadius);
+    }
+});
 
 const getIconComponent = (iconName: string) => {
     return (SolidIcons as Record<string, any>)[iconName] || null;
@@ -475,6 +484,17 @@ const getIconComponent = (iconName: string) => {
                                 Filter by Category
                             </h3>
                             <div class="flex flex-wrap gap-2">
+                                <button
+                                    @click="emit('filterCategory', 'all')"
+                                    class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-200"
+                                    :class="[
+                                        selectedCategory === 'all'
+                                            ? 'border-gray-100 bg-gray-100 text-gray-900 shadow-lg shadow-gray-100/10'
+                                            : 'border-gray-500/20 bg-gray-900/30 text-gray-500 hover:border-gray-500/40 hover:text-gray-100',
+                                    ]"
+                                >
+                                    All Services
+                                </button>
                                 <button
                                     v-for="cat in displayedCategories"
                                     :key="cat.id"

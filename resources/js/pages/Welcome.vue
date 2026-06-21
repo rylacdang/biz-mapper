@@ -32,6 +32,7 @@ const props = withDefaults(
 // Map States
 const mapContainer = ref<HTMLDivElement | null>(null);
 const selectedCategory = ref<string | number>(props.selectedCategory);
+const userCoords = ref<{ lat: number; lng: number } | null>(null);
 const {
     isMapLoaded,
     activeLayer,
@@ -41,6 +42,8 @@ const {
     panToLocation,
     showUserLocation,
     getMapCenter,
+    showProximityCircle,
+    clearProximityCircle,
 } = useLeafletMap(mapContainer);
 
 // Modal and Form States
@@ -80,8 +83,8 @@ watch(listingsList, () => {
     );
 });
 
-onMounted(() => {
-    initMap(
+onMounted(async () => {
+    await initMap(
         categoriesList.value,
         listingsList.value as ListingPin[],
         selectedCategory,
@@ -92,14 +95,30 @@ onMounted(() => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
+                userCoords.value = { lat: latitude, lng: longitude };
                 panToLocation(latitude, longitude, 13);
                 showUserLocation(latitude, longitude);
+
+                // Show the default 5km proximity circle around user position
+                showProximityCircle(latitude, longitude, 5);
             },
             () => {
-                // Denied or timeout — stay at default Philippines view
+                // Denied or timeout — draw 5km circle around default center
+                const center = getMapCenter();
+
+                if (center) {
+                    showProximityCircle(center.lat, center.lng, 5);
+                }
             },
             { timeout: 8000, enableHighAccuracy: false },
         );
+    } else {
+        // Geolocation not supported — draw 5km circle around default center
+        const center = getMapCenter();
+
+        if (center) {
+            showProximityCircle(center.lat, center.lng, 5);
+        }
     }
 });
 
@@ -166,16 +185,34 @@ const {
     renderMarkers,
     panToLocation,
     getMapCenter,
+    showProximityCircle,
+    clearProximityCircle,
 });
 
 const handleSearchProximity = (payload: {
     radius: number;
     keyword: string;
 }) => {
+    console.log('[Welcome] handleSearchProximity event received:', payload);
     proximitySearch(payload);
 };
 
+const handleRadiusChanged = (radius: number) => {
+    console.log('[Welcome] handleRadiusChanged event received:', radius);
+
+    if (userCoords.value) {
+        showProximityCircle(userCoords.value.lat, userCoords.value.lng, radius);
+    } else {
+        const center = getMapCenter();
+
+        if (center) {
+            showProximityCircle(center.lat, center.lng, radius);
+        }
+    }
+};
+
 const handleResetSearch = () => {
+    console.log('[Welcome] handleResetSearch event received');
     proximityReset();
 };
 </script>
@@ -225,6 +262,7 @@ const handleResetSearch = () => {
             @openEditModal="handleOpenEditModal"
             @openTrashModal="handleOpenTrashModal"
             @searchProximity="handleSearchProximity"
+            @radiusChanged="handleRadiusChanged"
             @resetSearch="handleResetSearch"
             @openCategoryExplorer="isCategoryModalOpen = true"
         />

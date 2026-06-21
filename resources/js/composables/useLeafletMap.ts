@@ -6,6 +6,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
     let L: any = null;
     let map: any = null;
     let markerLayerGroup: any = null;
+    let proximityCircle: any = null;
     const isMapLoaded = ref(false);
     const activeLayer = ref('satellite');
 
@@ -309,6 +310,66 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         return map ? map.getCenter() : null;
     }
 
+    function showProximityCircle(lat: number, lng: number, radiusKm: number) {
+        console.log('[useLeafletMap] showProximityCircle called:', {
+            lat,
+            lng,
+            radiusKm,
+            L: !!L,
+            map: !!map,
+        });
+
+        if (!L || !map) {
+            console.warn('[useLeafletMap] Leaflet or map not initialized');
+
+            return;
+        }
+
+        if (proximityCircle) {
+            console.log('[useLeafletMap] Removing existing circle');
+            map.removeLayer(proximityCircle);
+        }
+
+        try {
+            proximityCircle = L.circle([lat, lng], {
+                radius: radiusKm * 1000, // Leaflet expects meters
+                color: '#6366f1', // Sleek indigo stroke
+                weight: 1.5,
+                opacity: 0.8,
+                fillColor: '#818cf8', // Translucent indigo fill
+                fillOpacity: 0.15,
+                dashArray: '4, 4', // Dashed border
+                interactive: false,
+            }).addTo(map);
+
+            console.log(
+                '[useLeafletMap] Circle added to map:',
+                proximityCircle,
+            );
+
+            // Zoom map to fit the circle bounds so the user can see the full range
+            const bounds = proximityCircle.getBounds();
+            console.log('[useLeafletMap] Fitting bounds:', bounds);
+            map.fitBounds(bounds, {
+                padding: [20, 20],
+                animate: true,
+                duration: 1.5,
+            });
+        } catch (err) {
+            console.error(
+                '[useLeafletMap] Error creating or adding circle:',
+                err,
+            );
+        }
+    }
+
+    function clearProximityCircle() {
+        if (map && proximityCircle) {
+            map.removeLayer(proximityCircle);
+            proximityCircle = null;
+        }
+    }
+
     return {
         isMapLoaded,
         activeLayer,
@@ -318,5 +379,7 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
         panToLocation,
         showUserLocation,
         getMapCenter,
+        showProximityCircle,
+        clearProximityCircle,
     };
 }
