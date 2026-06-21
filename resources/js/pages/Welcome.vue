@@ -228,53 +228,33 @@ const handleResetSearch = () => {
         />
 
         <!-- Create Listing Modal -->
-        <BaseModal
+        <BusinessCreateForm
+            v-if="isCreateModalOpen"
             :is-open="isCreateModalOpen"
-            title="Register Business Directory"
-            subtitle="Complete registration details to place custom pins on database mapping."
-            :tabs="['general', 'details', 'schedule', 'position']"
-            v-model:currentTab="currentTab"
+            :current-tab="currentTab"
+            :categories-list="categoriesList"
             @close="handleCloseCreateModal"
-        >
-            <BusinessCreateForm
-                :current-tab="currentTab"
-                :categories-list="categoriesList"
-                @close="handleCloseCreateModal"
-                @tabChange="(tab) => (currentTab = tab)"
-            />
-        </BaseModal>
+            @tabChange="(tab) => (currentTab = tab)"
+        />
 
         <!-- Edit Listing Modal -->
-        <BaseModal
+        <BusinessEditForm
+            v-if="selectedListing"
             :is-open="isEditModalOpen"
-            title="Edit Business Listing"
-            subtitle="Update your listing details. Leave photo fields empty to keep existing images."
-            :tabs="['general', 'details', 'schedule', 'position']"
-            v-model:currentTab="editTab"
+            :current-tab="editTab"
+            :categories-list="categoriesList"
+            :listing="selectedListing"
             @close="handleCloseEditModal"
-        >
-            <BusinessEditForm
-                v-if="selectedListing"
-                :current-tab="editTab"
-                :categories-list="categoriesList"
-                :listing="selectedListing"
-                @close="handleCloseEditModal"
-                @tabChange="(tab) => (editTab = tab)"
-            />
-        </BaseModal>
+            @tabChange="(tab) => (editTab = tab)"
+        />
 
         <!-- Recycle Bin (Trash) Modal -->
-        <BaseModal
+        <BusinessTrashList
+            v-if="isTrashModalOpen"
             :is-open="isTrashModalOpen"
-            title="Recycle Bin"
-            subtitle="View and restore your soft-deleted business directory listings."
+            :trash-businesses="props.trashBusinesses"
             @close="handleCloseTrashModal"
-        >
-            <BusinessTrashList
-                :trash-businesses="props.trashBusinesses"
-                @close="handleCloseTrashModal"
-            />
-        </BaseModal>
+        />
 
         <!-- Dynamic loader overlay until map loads -->
         <div

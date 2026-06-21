@@ -2,10 +2,12 @@
 import { useForm, router } from '@inertiajs/vue3';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-vue-next';
 import { ref, watch, nextTick, onUnmounted } from 'vue';
+import BaseModal from '@/components/BaseModal.vue';
 import business from '@/routes/owner/business';
 import type { Category, Business } from '@/types';
 
 const props = defineProps<{
+    isOpen: boolean;
     currentTab: string;
     categoriesList: Category[];
     listing: Business;
@@ -214,407 +216,432 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <form
-        @submit.prevent="submitEditForm"
-        class="flex flex-col overflow-y-auto p-6 text-xs"
-    >
-        <!-- TAB 1: GENERAL INFO -->
-        <div v-show="currentTab === 'general'" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Listing Name
-                        <span class="text-rose-500">*</span></label
-                    >
-                    <input
-                        v-model="form.name"
-                        type="text"
-                        required
-                        placeholder="e.g. Manila Coffee Roasters"
-                        class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                    />
-                    <span
-                        v-if="form.errors.name"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.name }}
-                    </span>
-                </div>
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Category <span class="text-rose-500">*</span></label
-                    >
-                    <select
-                        v-model="form.category_id"
-                        required
-                        class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                    >
-                        <option
-                            value=""
-                            disabled
-                            class="bg-gray-900 text-gray-500"
-                        >
-                            Select Category
-                        </option>
-                        <option
-                            v-for="cat in categoriesList"
-                            :key="cat.id"
-                            :value="cat.id"
-                            class="bg-gray-900 text-gray-200"
-                        >
-                            {{ cat.name }}
-                        </option>
-                    </select>
-                    <span
-                        v-if="form.errors.category_id"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.category_id }}
-                    </span>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <label class="block font-bold text-gray-300"
-                    >Description <span class="text-rose-500">*</span></label
-                >
-                <textarea
-                    v-model="form.description"
-                    required
-                    rows="4"
-                    placeholder="Briefly describe your business offerings, services, specialty..."
-                    class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                ></textarea>
-                <span
-                    v-if="form.errors.description"
-                    class="text-[10px] text-red-400"
-                >
-                    {{ form.errors.description }}
-                </span>
-            </div>
-
-            <div class="space-y-2">
-                <label class="block font-bold text-gray-300"
-                    >Street Address <span class="text-rose-500">*</span></label
-                >
-                <input
-                    v-model="form.address"
-                    type="text"
-                    required
-                    placeholder="Complete building number, street name, city, province"
-                    class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                />
-                <span
-                    v-if="form.errors.address"
-                    class="text-[10px] text-red-400"
-                >
-                    {{ form.errors.address }}
-                </span>
-            </div>
-        </div>
-
-        <!-- TAB 2: DETAILS -->
-        <div v-show="currentTab === 'details'" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Contact Number</label
-                    >
-                    <input
-                        v-model="form.phone"
-                        type="text"
-                        placeholder="+63 917 123 4567"
-                        class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                    />
-                    <span
-                        v-if="form.errors.phone"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.phone }}
-                    </span>
-                </div>
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Website Address</label
-                    >
-                    <input
-                        v-model="form.website"
-                        type="text"
-                        placeholder="https://example.com"
-                        class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                    />
-                    <span
-                        v-if="form.errors.website"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.website }}
-                    </span>
-                </div>
-            </div>
-
-            <div
-                class="grid grid-cols-1 gap-4 border-t border-gray-500/20 pt-4 sm:grid-cols-2"
-            >
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Cover Photo Banner (Max 5MB)
-                        <span class="text-gray-500"
-                            >— leave empty to keep current</span
-                        ></label
-                    >
-                    <div
-                        class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"
-                    >
-                        <div class="space-y-1 text-center text-gray-500">
-                            <svg
-                                class="mx-auto h-6 w-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                            </svg>
-                            <input
-                                type="file"
-                                @change="handleCoverUpload"
-                                accept="image/*"
-                                class="cursor-pointer text-[10px] font-bold text-primary-light"
-                            />
-                            <span
-                                v-if="form.cover_photo"
-                                class="mt-1 block text-[10px] font-bold text-emerald-400"
-                            >
-                                ✓ Ready: {{ form.cover_photo.name }}
-                            </span>
-                        </div>
-                    </div>
-                    <span
-                        v-if="form.errors.cover_photo"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.cover_photo }}
-                    </span>
-                </div>
-                <div class="space-y-2">
-                    <label class="block font-bold text-gray-300"
-                        >Brand Logo (Max 2MB)
-                        <span class="text-gray-500"
-                            >— leave empty to keep current</span
-                        ></label
-                    >
-                    <div
-                        class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"
-                    >
-                        <div class="space-y-1 text-center text-gray-500">
-                            <svg
-                                class="mx-auto h-6 w-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                            <input
-                                type="file"
-                                @change="handleLogoUpload"
-                                accept="image/*"
-                                class="cursor-pointer text-[10px] font-bold text-primary-light"
-                            />
-                            <span
-                                v-if="form.logo"
-                                class="mt-1 block text-[10px] font-bold text-emerald-400"
-                            >
-                                ✓ Ready: {{ form.logo.name }}
-                            </span>
-                        </div>
-                    </div>
-                    <span
-                        v-if="form.errors.logo"
-                        class="text-[10px] text-red-400"
-                    >
-                        {{ form.errors.logo }}
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: SCHEDULE -->
-        <div v-show="currentTab === 'schedule'" class="space-y-3">
-            <p
-                class="mb-3 border-b border-gray-500/10 pb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase"
-            >
-                Set Operating Hours
-            </p>
-
-            <div
-                v-for="(dayData, dayName) in form.hours"
-                :key="dayName"
-                class="flex flex-col justify-between gap-3 border-b border-gray-500/5 pb-2.5 sm:flex-row sm:items-center"
-            >
-                <span
-                    class="w-24 text-xs font-extrabold text-gray-300 capitalize"
-                    >{{ dayName }}</span
-                >
-                <div class="flex flex-wrap items-center gap-4">
-                    <label
-                        class="flex cursor-pointer items-center gap-1.5 font-bold text-gray-400"
-                    >
-                        <input
-                            type="checkbox"
-                            v-model="dayData.closed"
-                            class="rounded border-gray-500/30 bg-gray-900 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        Closed
-                    </label>
-                    <div
-                        v-show="!dayData.closed"
-                        class="flex items-center gap-2"
-                    >
-                        <input
-                            v-model="dayData.open"
-                            type="time"
-                            class="rounded-lg border border-gray-500/20 bg-gray-900/40 px-2 py-1 text-gray-200 focus:outline-none"
-                        />
-                        <span class="font-medium text-gray-500">to</span>
-                        <input
-                            v-model="dayData.close"
-                            type="time"
-                            class="rounded-lg border border-gray-500/20 bg-gray-900/40 px-2 py-1 text-gray-200 focus:outline-none"
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 4: POSITION -->
-        <div v-show="currentTab === 'position'" class="flex flex-col gap-4">
-            <div
-                class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-500/10 pb-2"
-            >
-                <p
-                    class="text-[10px] font-bold tracking-widest text-gray-500 uppercase"
-                >
-                    Geospatial Marker Pin Placement
-                </p>
-                <div class="flex items-center gap-3 text-[11px] font-semibold">
-                    <div>
-                        <span class="text-gray-500">Lat:</span>
-                        <span class="font-mono text-gray-200">{{
-                            form.lat
-                        }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Lng:</span>
-                        <span class="font-mono text-gray-200">{{
-                            form.lng
-                        }}</span>
-                    </div>
-                </div>
-            </div>
-            <p class="text-[10px] leading-relaxed text-gray-500">
-                Click on the map or drag the blue marker to update the directory
-                location coordinates.
-            </p>
-
-            <!-- Mini Map Inside Modal -->
-            <div
-                ref="modalMapContainer"
-                class="z-0 h-[320px] w-full rounded-xl border border-gray-500/20"
-            ></div>
-        </div>
-
-        <!-- Footer Action Buttons -->
-        <div
-            class="mt-8 flex items-center justify-between border-t border-gray-500/15 bg-gray-900/40 pt-4"
+    <form @submit.prevent="submitEditForm">
+        <BaseModal
+            :is-open="isOpen"
+            title="Edit Business Listing"
+            subtitle="Update your listing details. Leave photo fields empty to keep existing images."
+            :tabs="['general', 'details', 'schedule', 'position']"
+            :current-tab="currentTab"
+            @update:currentTab="(tab) => emit('tabChange', tab)"
+            @close="emit('close')"
         >
-            <template v-if="isConfirmingDelete">
-                <div class="flex items-center gap-2 font-bold text-red-400">
-                    <AlertTriangle class="h-4 w-4 animate-pulse" />
-                    <span>Delete listing permanently?</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button
-                        type="button"
-                        @click="isConfirmingDelete = false"
-                        class="rounded-xl border border-gray-500/30 bg-gray-900 px-4 py-2 font-bold text-gray-400 transition hover:text-white"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        @click="submitDelete"
-                        :disabled="isDeleting"
-                        class="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 font-bold text-white shadow transition hover:bg-rose-500 active:scale-98 disabled:opacity-50"
-                    >
-                        <Loader2
-                            v-if="isDeleting"
-                            class="h-3 w-3 animate-spin text-white"
+            <div class="flex flex-col overflow-y-auto p-6 text-xs">
+                <!-- TAB 1: GENERAL INFO -->
+                <div v-show="currentTab === 'general'" class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Listing Name
+                                <span class="text-rose-500">*</span></label
+                            >
+                            <input
+                                v-model="form.name"
+                                type="text"
+                                required
+                                placeholder="e.g. Manila Coffee Roasters"
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            />
+                            <span
+                                v-if="form.errors.name"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.name }}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Category
+                                <span class="text-rose-500">*</span></label
+                            >
+                            <select
+                                v-model="form.category_id"
+                                required
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            >
+                                <option
+                                    value=""
+                                    disabled
+                                    class="bg-gray-900 text-gray-500"
+                                >
+                                    Select Category
+                                </option>
+                                <option
+                                    v-for="cat in categoriesList"
+                                    :key="cat.id"
+                                    :value="cat.id"
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    {{ cat.name }}
+                                </option>
+                            </select>
+                            <span
+                                v-if="form.errors.category_id"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.category_id }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block font-bold text-gray-300"
+                            >Description
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <textarea
+                            v-model="form.description"
+                            required
+                            rows="4"
+                            placeholder="Briefly describe your business offerings, services, specialty..."
+                            class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                        ></textarea>
+                        <span
+                            v-if="form.errors.description"
+                            class="text-[10px] text-red-400"
+                        >
+                            {{ form.errors.description }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block font-bold text-gray-300"
+                            >Street Address
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <input
+                            v-model="form.address"
+                            type="text"
+                            required
+                            placeholder="Complete building number, street name, city, province"
+                            class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
                         />
-                        Yes, Delete
-                    </button>
+                        <span
+                            v-if="form.errors.address"
+                            class="text-[10px] text-red-400"
+                        >
+                            {{ form.errors.address }}
+                        </span>
+                    </div>
                 </div>
-            </template>
-            <template v-else>
-                <div class="flex items-center gap-2">
-                    <button
-                        v-show="currentTab !== 'general'"
-                        type="button"
-                        @click="
-                            emit(
-                                'tabChange',
-                                currentTab === 'details'
-                                    ? 'general'
-                                    : currentTab === 'schedule'
-                                      ? 'details'
-                                      : 'schedule',
-                            )
-                        "
-                        class="rounded-xl border border-gray-500/30 bg-gray-900 px-4 py-2 font-bold text-gray-400 transition hover:text-white"
+
+                <!-- TAB 2: DETAILS -->
+                <div v-show="currentTab === 'details'" class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Contact Number</label
+                            >
+                            <input
+                                v-model="form.phone"
+                                type="text"
+                                placeholder="+63 917 123 4567"
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            />
+                            <span
+                                v-if="form.errors.phone"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.phone }}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Website Address</label
+                            >
+                            <input
+                                v-model="form.website"
+                                type="text"
+                                placeholder="https://example.com"
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            />
+                            <span
+                                v-if="form.errors.website"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.website }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div
+                        class="grid grid-cols-1 gap-4 border-t border-gray-500/20 pt-4 sm:grid-cols-2"
                     >
-                        Back
-                    </button>
-                    <button
-                        type="button"
-                        @click="isConfirmingDelete = true"
-                        class="flex items-center gap-1.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-2.5 font-bold text-rose-400 transition hover:bg-rose-500/20 hover:text-rose-300"
-                    >
-                        <Trash2 class="h-3.5 w-3.5" />
-                        Delete
-                    </button>
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Cover Photo Banner (Max 5MB)
+                                <span class="text-gray-500"
+                                    >— leave empty to keep current</span
+                                ></label
+                            >
+                            <div
+                                class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"
+                            >
+                                <div
+                                    class="space-y-1 text-center text-gray-500"
+                                >
+                                    <svg
+                                        class="mx-auto h-6 w-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                    <input
+                                        type="file"
+                                        @change="handleCoverUpload"
+                                        accept="image/*"
+                                        class="cursor-pointer text-[10px] font-bold text-primary-light"
+                                    />
+                                    <span
+                                        v-if="form.cover_photo"
+                                        class="mt-1 block text-[10px] font-bold text-emerald-400"
+                                    >
+                                        ✓ Ready: {{ form.cover_photo.name }}
+                                    </span>
+                                </div>
+                            </div>
+                            <span
+                                v-if="form.errors.cover_photo"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.cover_photo }}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Brand Logo (Max 2MB)
+                                <span class="text-gray-500"
+                                    >— leave empty to keep current</span
+                                ></label
+                            >
+                            <div
+                                class="flex items-center justify-center rounded-xl border border-dashed border-gray-500/35 bg-gray-900/20 p-4"
+                            >
+                                <div
+                                    class="space-y-1 text-center text-gray-500"
+                                >
+                                    <svg
+                                        class="mx-auto h-6 w-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                    <input
+                                        type="file"
+                                        @change="handleLogoUpload"
+                                        accept="image/*"
+                                        class="cursor-pointer text-[10px] font-bold text-primary-light"
+                                    />
+                                    <span
+                                        v-if="form.logo"
+                                        class="mt-1 block text-[10px] font-bold text-emerald-400"
+                                    >
+                                        ✓ Ready: {{ form.logo.name }}
+                                    </span>
+                                </div>
+                            </div>
+                            <span
+                                v-if="form.errors.logo"
+                                class="text-[10px] text-red-400"
+                            >
+                                {{ form.errors.logo }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button
-                        v-show="currentTab !== 'position'"
-                        type="button"
-                        @click="handleNextStep"
-                        class="rounded-xl bg-primary px-5 py-2 font-bold text-white shadow transition hover:bg-primary-light"
+
+                <!-- TAB 3: SCHEDULE -->
+                <div v-show="currentTab === 'schedule'" class="space-y-3">
+                    <p
+                        class="mb-3 border-b border-gray-500/10 pb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase"
                     >
-                        Next Step
-                    </button>
-                    <button
-                        v-show="currentTab === 'position'"
-                        type="submit"
-                        :disabled="form.processing"
-                        class="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 font-bold text-white shadow transition hover:bg-primary-light active:scale-98 disabled:opacity-50"
+                        Set Operating Hours
+                    </p>
+
+                    <div
+                        v-for="(dayData, dayName) in form.hours"
+                        :key="dayName"
+                        class="flex flex-col justify-between gap-3 border-b border-gray-500/5 pb-2.5 sm:flex-row sm:items-center"
                     >
-                        <Loader2
-                            v-if="form.processing"
-                            class="h-3.5 w-3.5 animate-spin text-white"
-                        />
-                        Save Changes
-                    </button>
+                        <span
+                            class="w-24 text-xs font-extrabold text-gray-300 capitalize"
+                            >{{ dayName }}</span
+                        >
+                        <div class="flex flex-wrap items-center gap-4">
+                            <label
+                                class="flex cursor-pointer items-center gap-1.5 font-bold text-gray-400"
+                            >
+                                <input
+                                    type="checkbox"
+                                    v-model="dayData.closed"
+                                    class="rounded border-gray-500/30 bg-gray-900 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Closed
+                            </label>
+                            <div
+                                v-show="!dayData.closed"
+                                class="flex items-center gap-2"
+                            >
+                                <input
+                                    v-model="dayData.open"
+                                    type="time"
+                                    class="rounded-lg border border-gray-500/20 bg-gray-900/40 px-2 py-1 text-gray-200 focus:outline-none"
+                                />
+                                <span class="font-medium text-gray-500"
+                                    >to</span
+                                >
+                                <input
+                                    v-model="dayData.close"
+                                    type="time"
+                                    class="rounded-lg border border-gray-500/20 bg-gray-900/40 px-2 py-1 text-gray-200 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </template>
-        </div>
+
+                <!-- TAB 4: POSITION -->
+                <div
+                    v-show="currentTab === 'position'"
+                    class="flex flex-col gap-4"
+                >
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-500/10 pb-2"
+                    >
+                        <p
+                            class="text-[10px] font-bold tracking-widest text-gray-500 uppercase"
+                        >
+                            Geospatial Marker Pin Placement
+                        </p>
+                        <div
+                            class="flex items-center gap-3 text-[11px] font-semibold"
+                        >
+                            <div>
+                                <span class="text-gray-500">Lat:</span>
+                                <span class="font-mono text-gray-200">{{
+                                    form.lat
+                                }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Lng:</span>
+                                <span class="font-mono text-gray-200">{{
+                                    form.lng
+                                }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[10px] leading-relaxed text-gray-500">
+                        Click on the map or drag the blue marker to update the
+                        directory location coordinates.
+                    </p>
+
+                    <!-- Mini Map Inside Modal -->
+                    <div
+                        ref="modalMapContainer"
+                        class="z-0 h-[320px] w-full rounded-xl border border-gray-500/20"
+                    ></div>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div
+                    class="mt-8 flex items-center justify-between border-t border-gray-500/15 bg-gray-900/40 pt-4"
+                >
+                    <template v-if="isConfirmingDelete">
+                        <div
+                            class="flex items-center gap-2 font-bold text-red-400"
+                        >
+                            <AlertTriangle class="h-4 w-4 animate-pulse" />
+                            <span>Delete listing permanently?</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                @click="isConfirmingDelete = false"
+                                class="rounded-xl border border-gray-500/30 bg-gray-900 px-4 py-2 font-bold text-gray-400 transition hover:text-white"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                @click="submitDelete"
+                                :disabled="isDeleting"
+                                class="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 font-bold text-white shadow transition hover:bg-rose-500 active:scale-98 disabled:opacity-50"
+                            >
+                                <Loader2
+                                    v-if="isDeleting"
+                                    class="h-3 w-3 animate-spin text-white"
+                                />
+                                Yes, Delete
+                            </button>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="flex items-center gap-2">
+                            <button
+                                v-show="currentTab !== 'general'"
+                                type="button"
+                                @click="
+                                    emit(
+                                        'tabChange',
+                                        currentTab === 'details'
+                                            ? 'general'
+                                            : currentTab === 'schedule'
+                                              ? 'details'
+                                              : 'schedule',
+                                    )
+                                "
+                                class="rounded-xl border border-gray-500/30 bg-gray-900 px-4 py-2 font-bold text-gray-400 transition hover:text-white"
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="button"
+                                @click="isConfirmingDelete = true"
+                                class="flex items-center gap-1.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-2.5 font-bold text-rose-400 transition hover:bg-rose-500/20 hover:text-rose-300"
+                            >
+                                <Trash2 class="h-3.5 w-3.5" />
+                                Delete
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button
+                                v-show="currentTab !== 'position'"
+                                type="button"
+                                @click="handleNextStep"
+                                class="rounded-xl bg-primary px-5 py-2 font-bold text-white shadow transition hover:bg-primary-light"
+                            >
+                                Next Step
+                            </button>
+                            <button
+                                v-show="currentTab === 'position'"
+                                type="submit"
+                                :disabled="form.processing"
+                                class="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 font-bold text-white shadow transition hover:bg-primary-light active:scale-98 disabled:opacity-50"
+                            >
+                                <Loader2
+                                    v-if="form.processing"
+                                    class="h-3.5 w-3.5 animate-spin text-white"
+                                />
+                                Save Changes
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </BaseModal>
     </form>
 </template>
