@@ -36,6 +36,7 @@ async function fetchPsgc(
     try {
         const response = await fetch(url);
         const json = await response.json();
+
         return json.data ?? [];
     } catch {
         return [];
@@ -69,7 +70,9 @@ export function useAddressSearch(form: any) {
 
     // Watchers for selections updating the dropdown lists
     watch(selectedRegionCode, async (code) => {
-        if (isInitializing.value) return;
+        if (isInitializing.value) {
+            return;
+        }
 
         provinces.value = [];
         cities.value = [];
@@ -83,7 +86,9 @@ export function useAddressSearch(form: any) {
         form.city_code = '';
         form.barangay_code = '';
 
-        if (!code) return;
+        if (!code) {
+            return;
+        }
 
         // Load provinces
         provinces.value = await fetchPsgc('provinces', {
@@ -99,7 +104,9 @@ export function useAddressSearch(form: any) {
     });
 
     watch(selectedProvinceCode, (code) => {
-        if (isInitializing.value) return;
+        if (isInitializing.value) {
+            return;
+        }
 
         selectedCityCode.value = '';
         selectedBarangayCode.value = '';
@@ -110,7 +117,9 @@ export function useAddressSearch(form: any) {
     });
 
     watch(selectedCityCode, async (code) => {
-        if (isInitializing.value) return;
+        if (isInitializing.value) {
+            return;
+        }
 
         barangays.value = [];
         selectedBarangayCode.value = '';
@@ -120,6 +129,7 @@ export function useAddressSearch(form: any) {
 
         if (code) {
             const selectedCity = cities.value.find((c) => c.code === code);
+
             if (selectedCity) {
                 selectedProvinceCode.value = selectedCity.province_code || '';
                 form.province_code = selectedCity.province_code || '';
@@ -133,7 +143,10 @@ export function useAddressSearch(form: any) {
     });
 
     watch(selectedBarangayCode, (code) => {
-        if (isInitializing.value) return;
+        if (isInitializing.value) {
+            return;
+        }
+
         form.barangay_code = code;
     });
 
@@ -141,10 +154,14 @@ export function useAddressSearch(form: any) {
     let searchTimeout: any = null;
     const onAddressSearchInput = () => {
         const val = addressSearch.value;
-        if (searchTimeout) clearTimeout(searchTimeout);
+
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
 
         if (!val || val.length < 3) {
             addressSuggestions.value = [];
+
             return;
         }
 
@@ -156,6 +173,7 @@ export function useAddressSearch(form: any) {
                     val,
                 )}&format=json&addressdetails=1&countrycodes=ph&limit=5`;
                 const response = await fetch(queryUrl);
+
                 if (response.ok) {
                     addressSuggestions.value = await response.json();
                 }
@@ -195,8 +213,10 @@ export function useAddressSearch(form: any) {
         form.lng = parseFloat(suggestion.lon);
 
         const addr = suggestion.address;
+
         if (!addr) {
             isInitializing.value = false;
+
             return;
         }
 
@@ -217,6 +237,7 @@ export function useAddressSearch(form: any) {
             const cleanRegion = regionName
                 .toLowerCase()
                 .replace(/[^a-z0-9]/g, '');
+
             if (
                 cleanRegion.includes('manila') ||
                 cleanRegion.includes('ncr') ||
@@ -248,6 +269,7 @@ export function useAddressSearch(form: any) {
                 const matchedProvince = provinces.value.find((p) =>
                     normalizeMatch(p.name, provinceName),
                 );
+
                 if (matchedProvince) {
                     selectedProvinceCode.value = matchedProvince.code;
                     form.province_code = matchedProvince.code;
@@ -259,6 +281,7 @@ export function useAddressSearch(form: any) {
                 const matchedCity = cities.value.find((c) =>
                     normalizeMatch(c.name, cityName),
                 );
+
                 if (matchedCity) {
                     selectedCityCode.value = matchedCity.code;
                     form.city_code = matchedCity.code;
@@ -280,6 +303,7 @@ export function useAddressSearch(form: any) {
                         const matchedBarangay = barangays.value.find((b) =>
                             normalizeMatch(b.name, barangayName),
                         );
+
                         if (matchedBarangay) {
                             selectedBarangayCode.value = matchedBarangay.code;
                             form.barangay_code = matchedBarangay.code;
@@ -318,7 +342,10 @@ export function useAddressSearch(form: any) {
 
     // Manual geocoding in case they just typed and didn't select suggestions
     const geocodeAddress = async () => {
-        if (!form.address) return;
+        if (!form.address) {
+            return;
+        }
+
         try {
             const query = `${form.address}, Philippines`;
             const response = await fetch(
@@ -326,8 +353,10 @@ export function useAddressSearch(form: any) {
                     query,
                 )}&format=json&limit=1`,
             );
+
             if (response.ok) {
                 const data = await response.json();
+
                 if (data && data.length > 0) {
                     form.lat = parseFloat(data[0].lat);
                     form.lng = parseFloat(data[0].lon);
@@ -353,9 +382,11 @@ export function useAddressSearch(form: any) {
                 limit: '300',
             });
         }
+
         if (form.province_code) {
             selectedProvinceCode.value = form.province_code;
         }
+
         if (form.city_code) {
             selectedCityCode.value = form.city_code;
             barangays.value = await fetchPsgc('barangays', {
@@ -363,6 +394,7 @@ export function useAddressSearch(form: any) {
                 limit: '1000',
             });
         }
+
         if (form.barangay_code) {
             selectedBarangayCode.value = form.barangay_code;
         }
@@ -377,6 +409,7 @@ export function useAddressSearch(form: any) {
         if (!selectedProvinceCode.value) {
             return cities.value;
         }
+
         return cities.value.filter(
             (c) => c.province_code === selectedProvinceCode.value,
         );

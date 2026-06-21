@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Head, usePage, router } from '@inertiajs/vue3';
 import { onMounted, ref, computed, watch } from 'vue';
-import BaseModal from '@/components/BaseModal.vue';
+import CategoryExplorerModal from '@/components/CategoryExplorerModal.vue';
 import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
 import BusinessEditForm from '@/components/owner/BusinessEditForm.vue';
 import BusinessTrashList from '@/components/owner/BusinessTrashList.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
-import CategoryExplorerModal from '@/components/CategoryExplorerModal.vue';
 import { useLeafletMap } from '@/composables/useLeafletMap';
 import { useProximitySearch } from '@/composables/useProximitySearch';
 import type { Category, Business, ListingPin } from '@/types';
@@ -261,7 +260,6 @@ const handleResetSearch = () => {
 
         <!-- Category Explorer Modal -->
         <CategoryExplorerModal
-            v-slot
             :is-open="isCategoryModalOpen"
             :categories="categoriesList"
             :selected-category="selectedCategory"

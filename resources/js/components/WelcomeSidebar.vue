@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as SolidIcons from '@heroicons/vue/24/solid';
 import { Link } from '@inertiajs/vue3';
-import { Trash2, Search, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { Trash2, Search, ChevronDown } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { dashboard, login, register, logout } from '@/routes';

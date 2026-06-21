@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/vue3';
 import { Loader2 } from 'lucide-vue-next';
 import { ref, watch, nextTick, onUnmounted, onMounted } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
+import { useAddressSearch } from '@/composables/useAddressSearch';
 import business from '@/routes/owner/business';
 import type { Category } from '@/types';
 
@@ -70,24 +71,30 @@ const submitBusinessForm = async () => {
         form.setError('address', 'Street address is required.');
         isValid = false;
     }
+
     if (!selectedRegionCode.value) {
         form.setError('address', 'Region is required.');
         isValid = false;
     }
+
     if (hasProvinces.value && !selectedProvinceCode.value) {
         form.setError('address', 'Province is required.');
         isValid = false;
     }
+
     if (!selectedCityCode.value) {
         form.setError('address', 'City/Municipality is required.');
         isValid = false;
     }
+
     if (!selectedBarangayCode.value) {
         form.setError('address', 'Barangay is required.');
         isValid = false;
     }
 
-    if (!isValid) return;
+    if (!isValid) {
+        return;
+    }
 
     await geocodeAddress();
     form.post(business.store().url, {
@@ -141,7 +148,6 @@ const handleNextStep = () => {
 };
 
 // Address Search & PSGC Logic
-import { useAddressSearch } from '@/composables/useAddressSearch';
 
 const {
     regions,
@@ -175,6 +181,7 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
         if (modalMarker) {
             modalMarker.setLatLng([newLat, newLng]);
         }
+
         if (modalMap) {
             modalMap.setView([newLat, newLng], 15);
         }

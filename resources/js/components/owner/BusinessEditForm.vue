@@ -3,9 +3,9 @@ import { useForm, router } from '@inertiajs/vue3';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-vue-next';
 import { ref, watch, nextTick, onUnmounted, onMounted } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
+import { useAddressSearch } from '@/composables/useAddressSearch';
 import business from '@/routes/owner/business';
 import type { Category, Business } from '@/types';
-import { useAddressSearch } from '@/composables/useAddressSearch';
 
 const props = defineProps<{
     isOpen: boolean;
@@ -90,24 +90,30 @@ const submitEditForm = async () => {
         form.setError('address', 'Street address is required.');
         isValid = false;
     }
+
     if (!selectedRegionCode.value) {
         form.setError('address', 'Region is required.');
         isValid = false;
     }
+
     if (hasProvinces.value && !selectedProvinceCode.value) {
         form.setError('address', 'Province is required.');
         isValid = false;
     }
+
     if (!selectedCityCode.value) {
         form.setError('address', 'City/Municipality is required.');
         isValid = false;
     }
+
     if (!selectedBarangayCode.value) {
         form.setError('address', 'Barangay is required.');
         isValid = false;
     }
 
-    if (!isValid) return;
+    if (!isValid) {
+        return;
+    }
 
     await geocodeAddress();
     form.post(business.update(props.listing.id).url, {
@@ -186,6 +192,7 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
         if (modalMarker) {
             modalMarker.setLatLng([newLat, newLng]);
         }
+
         if (modalMap) {
             modalMap.setView([newLat, newLng], 15);
         }

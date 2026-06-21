@@ -20,7 +20,11 @@ const searchQuery = ref('');
 
 const filteredCategories = computed(() => {
     const query = searchQuery.value.toLowerCase().trim();
-    if (!query) return props.categories;
+
+    if (!query) {
+        return props.categories;
+    }
+
     return props.categories.filter((cat) =>
         cat.name.toLowerCase().includes(query),
     );
