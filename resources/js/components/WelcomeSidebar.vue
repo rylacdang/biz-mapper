@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import * as SolidIcons from '@heroicons/vue/24/solid';
 import { Link } from '@inertiajs/vue3';
-import { Trash2, Search } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Trash2, Search, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { dashboard, login, register, logout } from '@/routes';
 import type { Category, Business } from '@/types';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         isOwner: boolean;
         canRegister: boolean;
@@ -24,6 +24,12 @@ withDefaults(
     },
 );
 
+const limitCount = 6;
+
+const displayedCategories = computed(() => {
+    return props.categories.slice(0, limitCount);
+});
+
 const emit = defineEmits<{
     (e: 'filterCategory', categoryId: string | number): void;
     (e: 'toggleLayer', layer: string): void;
@@ -33,6 +39,7 @@ const emit = defineEmits<{
     (e: 'openTrashModal'): void;
     (e: 'searchProximity', payload: { radius: number; keyword: string }): void;
     (e: 'resetSearch'): void;
+    (e: 'openCategoryExplorer'): void;
 }>();
 
 const searchRadius = ref(5);
@@ -181,7 +188,7 @@ const getIconComponent = (iconName: string) => {
                                 All Services
                             </button>
                             <button
-                                v-for="cat in categories"
+                                v-for="cat in displayedCategories"
                                 :key="cat.id"
                                 @click="emit('filterCategory', cat.name)"
                                 class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
@@ -210,6 +217,15 @@ const getIconComponent = (iconName: string) => {
                                     :style="{ color: cat.color }"
                                 />
                                 {{ cat.name }}
+                            </button>
+
+                            <button
+                                v-if="categories.length > limitCount"
+                                @click="emit('openCategoryExplorer')"
+                                class="flex cursor-pointer items-center gap-1 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary-light transition-all hover:border-primary hover:text-white"
+                            >
+                                <span>More Categories</span>
+                                <ChevronDown class="h-3.5 w-3.5" />
                             </button>
                         </div>
                     </div>
@@ -460,7 +476,7 @@ const getIconComponent = (iconName: string) => {
                             </h3>
                             <div class="flex flex-wrap gap-2">
                                 <button
-                                    v-for="cat in categories"
+                                    v-for="cat in displayedCategories"
                                     :key="cat.id"
                                     @click="emit('filterCategory', cat.name)"
                                     class="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-gray-900/30 px-3 py-1.5 text-xs font-semibold transition-all duration-200"
@@ -490,6 +506,15 @@ const getIconComponent = (iconName: string) => {
                                         :style="{ color: cat.color }"
                                     />
                                     {{ cat.name }}
+                                </button>
+
+                                <button
+                                    v-if="categories.length > limitCount"
+                                    @click="emit('openCategoryExplorer')"
+                                    class="flex cursor-pointer items-center gap-1 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary-light transition-all hover:border-primary hover:text-white"
+                                >
+                                    <span>More Categories</span>
+                                    <ChevronDown class="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>

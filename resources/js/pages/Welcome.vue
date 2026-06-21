@@ -6,6 +6,7 @@ import BusinessCreateForm from '@/components/owner/BusinessCreateForm.vue';
 import BusinessEditForm from '@/components/owner/BusinessEditForm.vue';
 import BusinessTrashList from '@/components/owner/BusinessTrashList.vue';
 import WelcomeSidebar from '@/components/WelcomeSidebar.vue';
+import CategoryExplorerModal from '@/components/CategoryExplorerModal.vue';
 import { useLeafletMap } from '@/composables/useLeafletMap';
 import { useProximitySearch } from '@/composables/useProximitySearch';
 import type { Category, Business, ListingPin } from '@/types';
@@ -47,6 +48,7 @@ const {
 const isCreateModalOpen = ref(false);
 const isEditModalOpen = ref(false);
 const isTrashModalOpen = ref(false);
+const isCategoryModalOpen = ref(false);
 const selectedListing = ref<Business | null>(null);
 const currentTab = ref('general');
 const editTab = ref('general');
@@ -225,6 +227,7 @@ const handleResetSearch = () => {
             @openTrashModal="handleOpenTrashModal"
             @searchProximity="handleSearchProximity"
             @resetSearch="handleResetSearch"
+            @openCategoryExplorer="isCategoryModalOpen = true"
         />
 
         <!-- Create Listing Modal -->
@@ -254,6 +257,16 @@ const handleResetSearch = () => {
             :is-open="isTrashModalOpen"
             :trash-businesses="props.trashBusinesses"
             @close="handleCloseTrashModal"
+        />
+
+        <!-- Category Explorer Modal -->
+        <CategoryExplorerModal
+            v-slot
+            :is-open="isCategoryModalOpen"
+            :categories="categoriesList"
+            :selected-category="selectedCategory"
+            @close="isCategoryModalOpen = false"
+            @selectCategory="handleCategoryFilter"
         />
 
         <!-- Dynamic loader overlay until map loads -->
