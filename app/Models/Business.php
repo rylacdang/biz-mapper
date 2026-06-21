@@ -23,7 +23,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'logo',
     'hours',
     'status',
-    'view_count'
+    'view_count',
+    'region_code',
+    'province_code',
+    'city_code',
+    'barangay_code'
 ])]
 class Business extends Model
 {

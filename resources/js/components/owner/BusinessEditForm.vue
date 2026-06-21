@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useForm, router } from '@inertiajs/vue3';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-vue-next';
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted, onMounted } from 'vue';
 import BaseModal from '@/components/BaseModal.vue';
 import business from '@/routes/owner/business';
 import type { Category, Business } from '@/types';
+import { useAddressSearch } from '@/composables/useAddressSearch';
 
 const props = defineProps<{
     isOpen: boolean;
@@ -41,6 +42,10 @@ const form = useForm({
     name: props.listing.name,
     description: props.listing.description,
     address: props.listing.address,
+    region_code: props.listing.region_code ?? '',
+    province_code: props.listing.province_code ?? '',
+    city_code: props.listing.city_code ?? '',
+    barangay_code: props.listing.barangay_code ?? '',
     lat: props.listing.lat,
     lng: props.listing.lng,
     phone: props.listing.phone ?? '',
@@ -77,7 +82,34 @@ const handleLogoUpload = (e: Event) => {
 };
 
 // Form Submission — POST with _method spoofing for file uploads
-const submitEditForm = () => {
+const submitEditForm = async () => {
+    form.clearErrors();
+    let isValid = true;
+
+    if (!form.address || form.address.trim() === '') {
+        form.setError('address', 'Street address is required.');
+        isValid = false;
+    }
+    if (!selectedRegionCode.value) {
+        form.setError('address', 'Region is required.');
+        isValid = false;
+    }
+    if (hasProvinces.value && !selectedProvinceCode.value) {
+        form.setError('address', 'Province is required.');
+        isValid = false;
+    }
+    if (!selectedCityCode.value) {
+        form.setError('address', 'City/Municipality is required.');
+        isValid = false;
+    }
+    if (!selectedBarangayCode.value) {
+        form.setError('address', 'Barangay is required.');
+        isValid = false;
+    }
+
+    if (!isValid) return;
+
+    await geocodeAddress();
     form.post(business.update(props.listing.id).url, {
         onSuccess: () => {
             emit('close');
@@ -111,11 +143,6 @@ const handleNextStep = () => {
             isValid = false;
         }
 
-        if (!form.address || form.address.trim() === '') {
-            form.setError('address', 'Street address is required.');
-            isValid = false;
-        }
-
         if (isValid) {
             emit('tabChange', 'details');
         }
@@ -125,6 +152,50 @@ const handleNextStep = () => {
         emit('tabChange', 'position');
     }
 };
+
+// Address Search & PSGC Logic
+const {
+    regions,
+    provinces,
+    cities,
+    barangays,
+    selectedRegionCode,
+    selectedProvinceCode,
+    selectedCityCode,
+    selectedBarangayCode,
+    addressSearch,
+    addressSuggestions,
+    showSuggestions,
+    isLoadingSuggestions,
+    onAddressSearchInput,
+    selectSuggestion,
+    geocodeAddress,
+    init,
+    hasProvinces,
+} = useAddressSearch(form);
+
+const closeSuggestions = () => {
+    setTimeout(() => {
+        showSuggestions.value = false;
+    }, 200);
+};
+
+// Sync leaflet marker and view with geocoded lat/lng changes
+watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
+    if (newLat && newLng) {
+        if (modalMarker) {
+            modalMarker.setLatLng([newLat, newLng]);
+        }
+        if (modalMap) {
+            modalMap.setView([newLat, newLng], 15);
+        }
+    }
+});
+
+onMounted(async () => {
+    await init();
+    addressSearch.value = form.address;
+});
 
 // Map States & Reference
 const modalMapContainer = ref<HTMLDivElement | null>(null);
@@ -301,26 +372,6 @@ onUnmounted(() => {
                             class="text-[10px] text-red-400"
                         >
                             {{ form.errors.description }}
-                        </span>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="block font-bold text-gray-300"
-                            >Street Address
-                            <span class="text-rose-500">*</span></label
-                        >
-                        <input
-                            v-model="form.address"
-                            type="text"
-                            required
-                            placeholder="Complete building number, street name, city, province"
-                            class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                        />
-                        <span
-                            v-if="form.errors.address"
-                            class="text-[10px] text-red-400"
-                        >
-                            {{ form.errors.address }}
                         </span>
                     </div>
                 </div>
@@ -519,6 +570,171 @@ onUnmounted(() => {
                     v-show="currentTab === 'position'"
                     class="flex flex-col gap-4"
                 >
+                    <div class="space-y-2">
+                        <label class="block font-bold text-gray-300"
+                            >Street Address
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <div class="relative">
+                            <input
+                                v-model="addressSearch"
+                                @input="onAddressSearchInput"
+                                @focus="showSuggestions = true"
+                                @blur="closeSuggestions"
+                                type="text"
+                                required
+                                placeholder="Type to search address or city in NCR..."
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            />
+                            <div
+                                v-if="isLoadingSuggestions"
+                                class="absolute top-3 right-3"
+                            >
+                                <Loader2
+                                    class="h-4 w-4 animate-spin text-gray-400"
+                                />
+                            </div>
+
+                            <!-- Suggestions Dropdown -->
+                            <div
+                                v-if="
+                                    showSuggestions &&
+                                    addressSuggestions.length > 0
+                                "
+                                class="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-800 bg-gray-950 py-2 shadow-2xl"
+                            >
+                                <button
+                                    v-for="s in addressSuggestions"
+                                    :key="s.display_name"
+                                    type="button"
+                                    @mousedown="selectSuggestion(s)"
+                                    class="w-full px-4 py-2.5 text-left text-[11px] font-medium text-gray-200 transition hover:bg-gray-800"
+                                >
+                                    {{ s.display_name }}
+                                </button>
+                            </div>
+                        </div>
+                        <span
+                            v-if="form.errors.address"
+                            class="text-[10px] text-red-400"
+                        >
+                            {{ form.errors.address }}
+                        </span>
+                    </div>
+
+                    <!-- PSGC Selectors Grid -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Region
+                                <span class="text-rose-500">*</span></label
+                            >
+                            <select
+                                v-model="selectedRegionCode"
+                                required
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            >
+                                <option
+                                    value=""
+                                    disabled
+                                    class="bg-gray-900 text-gray-500"
+                                >
+                                    Select Region
+                                </option>
+                                <option
+                                    v-for="r in regions"
+                                    :key="r.code"
+                                    :value="r.code"
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    {{ r.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Province</label
+                            >
+                            <select
+                                v-model="selectedProvinceCode"
+                                :disabled="!hasProvinces"
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none disabled:opacity-50"
+                            >
+                                <option
+                                    value=""
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    N/A (No Province)
+                                </option>
+                                <option
+                                    v-for="p in provinces"
+                                    :key="p.code"
+                                    :value="p.code"
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    {{ p.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >City / Municipality
+                                <span class="text-rose-500">*</span></label
+                            >
+                            <select
+                                v-model="selectedCityCode"
+                                required
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            >
+                                <option
+                                    value=""
+                                    disabled
+                                    class="bg-gray-900 text-gray-500"
+                                >
+                                    Select City
+                                </option>
+                                <option
+                                    v-for="c in cities"
+                                    :key="c.code"
+                                    :value="c.code"
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    {{ c.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block font-bold text-gray-300"
+                                >Barangay
+                                <span class="text-rose-500">*</span></label
+                            >
+                            <select
+                                v-model="selectedBarangayCode"
+                                required
+                                class="w-full rounded-xl border border-gray-500/30 bg-gray-900/40 px-3 py-2.5 text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                            >
+                                <option
+                                    value=""
+                                    disabled
+                                    class="bg-gray-900 text-gray-500"
+                                >
+                                    Select Barangay
+                                </option>
+                                <option
+                                    v-for="b in barangays"
+                                    :key="b.code"
+                                    :value="b.code"
+                                    class="bg-gray-900 text-gray-200"
+                                >
+                                    {{ b.name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div
                         class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-500/10 pb-2"
                     >
