@@ -56,7 +56,9 @@ const handleRestore = (id: number) => {
                         <img
                             :src="
                                 biz.cover_photo
-                                    ? '/storage/' + biz.cover_photo
+                                    ? biz.cover_photo.startsWith('http')
+                                        ? biz.cover_photo
+                                        : '/storage/' + biz.cover_photo
                                     : '/img/placeholder.jpg'
                             "
                             class="h-full w-full object-cover"

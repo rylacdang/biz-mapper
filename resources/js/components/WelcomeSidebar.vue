@@ -275,7 +275,9 @@ const getIconComponent = (iconName: string) => {
                                     <img
                                         :src="
                                             biz.cover_photo
-                                                ? '/storage/' + biz.cover_photo
+                                                ? biz.cover_photo.startsWith('http')
+                                                    ? biz.cover_photo
+                                                    : '/storage/' + biz.cover_photo
                                                 : '/img/placeholder.jpg'
                                         "
                                         class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
@@ -440,8 +442,9 @@ const getIconComponent = (iconName: string) => {
                                         <img
                                             :src="
                                                 biz.cover_photo
-                                                    ? '/storage/' +
-                                                      biz.cover_photo
+                                                    ? biz.cover_photo.startsWith('http')
+                                                        ? biz.cover_photo
+                                                        : '/storage/' + biz.cover_photo
                                                     : '/img/placeholder.jpg'
                                             "
                                             class="h-full w-full object-cover transition duration-300 group-hover:scale-105"

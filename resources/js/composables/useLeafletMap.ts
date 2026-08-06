@@ -186,7 +186,6 @@ export function useLeafletMap(mapContainer: Ref<HTMLDivElement | null>) {
 
             const iconHtml = `
                 <div class="relative flex items-center justify-center cursor-pointer" style="width: 36px; height: 36px;">
-                    <span class="absolute inline-flex h-9 w-9 animate-ping rounded-full opacity-35" style="background-color: ${pinColor};"></span>
                     <div class="relative flex items-center justify-center h-7 w-7 rounded-full border-2 border-white shadow-xl text-white transform hover:scale-110 transition-transform duration-200" style="background-color: ${pinColor};">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="${iconPath}" />
