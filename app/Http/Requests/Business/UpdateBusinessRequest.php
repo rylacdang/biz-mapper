@@ -14,7 +14,7 @@ class UpdateBusinessRequest extends FormRequest
     {
         $business = $this->route('business');
 
-        return $business && $business->user_id === $this->user()->id;
+        return $business && $this->user()->can('update', $business);
     }
 
     /**

@@ -33,9 +33,9 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
     public function getTrashedByUserIdWithCategory(int|string $userId): Collection;
 
     /**
-     * Find soft-deleted business by ID.
+     * Find a soft-deleted business or throw when missing.
      */
-    public function findTrashed(int|string $id): ?Model;
+    public function findTrashedOrFail(int|string $id): Model;
 
     /**
      * Restore soft-deleted business.
@@ -45,11 +45,5 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
     /**
      * Search businesses inside a bounding box pre-filter sorted by Haversine distance.
      */
-    public function searchByRadius(
-        float $latitude,
-        float $longitude,
-        float $radius,
-        ?string $keyword = null,
-        ?string $category = null
-    ): Collection;
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection;
 }

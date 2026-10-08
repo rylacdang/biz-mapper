@@ -37,21 +37,27 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
     public function create(array $data): Model
     {
         $model = $this->eloquentRepo->create($data);
+
         $this->flush();
+
         return $model;
     }
 
     public function update(string|int $id, array $data): bool
     {
         $updated = $this->eloquentRepo->update($id, $data);
+
         $this->flush();
+
         return $updated;
     }
 
     public function delete(string|int $id): bool
     {
         $deleted = $this->eloquentRepo->delete($id);
+
         $this->flush();
+
         return $deleted;
     }
 

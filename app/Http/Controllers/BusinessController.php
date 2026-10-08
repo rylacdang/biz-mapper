@@ -9,6 +9,7 @@ use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Services\BusinessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class BusinessController extends Controller
@@ -23,12 +24,7 @@ class BusinessController extends Controller
      */
     public function store(StoreBusinessRequest $request): RedirectResponse
     {
-        $this->businessService->registerBusiness(
-            $request->validated(),
-            Auth::id(),
-            $request->file('cover_photo'),
-            $request->file('logo'),
-        );
+        $this->businessService->registerBusiness($request->validated(), Auth::id(), $request->file('cover_photo'), $request->file('logo'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing created successfully.')]);
 
@@ -40,12 +36,7 @@ class BusinessController extends Controller
      */
     public function update(UpdateBusinessRequest $request, Business $business): RedirectResponse
     {
-        $this->businessService->updateBusiness(
-            $business,
-            $request->validated(),
-            $request->file('cover_photo'),
-            $request->file('logo'),
-        );
+        $this->businessService->updateBusiness($business, $request->validated(), $request->file('cover_photo'), $request->file('logo'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing updated successfully.')]);
 
@@ -57,9 +48,7 @@ class BusinessController extends Controller
      */
     public function destroy(Business $business): RedirectResponse
     {
-        if ($business->user_id !== Auth::id()) {
-            abort(403);
-        }
+        Gate::authorize('delete', $business);
 
         $this->businessRepo->delete($business->id);
 
@@ -73,15 +62,9 @@ class BusinessController extends Controller
      */
     public function restore(int $id): RedirectResponse
     {
-        $business = $this->businessRepo->findTrashed($id);
+        $business = $this->businessRepo->findTrashedOrFail($id);
 
-        if (! $business) {
-            abort(404);
-        }
-
-        if ($business->user_id !== Auth::id()) {
-            abort(403);
-        }
+        Gate::authorize('restore', $business);
 
         $this->businessRepo->restoreBusiness($id);
 

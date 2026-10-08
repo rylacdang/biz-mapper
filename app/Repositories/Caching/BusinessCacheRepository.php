@@ -23,7 +23,7 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
     {
         return $this->remember(
             'all_with_category',
-            fn() => $this->eloquentRepo->getAllWithCategory()
+            fn () => $this->eloquentRepo->getAllWithCategory()
         );
     }
 
@@ -31,7 +31,7 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
     {
         return $this->remember(
             "user.{$userId}.businesses",
-            fn() => $this->eloquentRepo->getByUserIdWithCategory($userId)
+            fn () => $this->eloquentRepo->getByUserIdWithCategory($userId)
         );
     }
 
@@ -39,7 +39,7 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
     {
         return $this->remember(
             "category.{$categoryName}.businesses",
-            fn() => $this->eloquentRepo->getByCategoryWithCategory($categoryName)
+            fn () => $this->eloquentRepo->getByCategoryWithCategory($categoryName)
         );
     }
 
@@ -48,9 +48,12 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $this->eloquentRepo->getTrashedByUserIdWithCategory($userId);
     }
 
-    public function findTrashed(int|string $id): ?Model
+    /**
+     * Find a soft-deleted business or throw when missing.
+     */
+    public function findTrashedOrFail(int|string $id): Model
     {
-        return $this->eloquentRepo->findTrashed($id);
+        return $this->eloquentRepo->findTrashedOrFail($id);
     }
 
     public function restoreBusiness(int|string $id): bool
@@ -64,13 +67,8 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $restored;
     }
 
-    public function searchByRadius(
-        float $latitude,
-        float $longitude,
-        float $radius,
-        ?string $keyword = null,
-        ?string $category = null
-    ): Collection {
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    {
         return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category);
     }
 }

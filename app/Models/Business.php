@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\BusinessStatus;
+use App\Policies\BusinessPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,8 +29,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'region_code',
     'province_code',
     'city_code',
-    'barangay_code'
+    'barangay_code',
 ])]
+#[UsePolicy(BusinessPolicy::class)]
 class Business extends Model
 {
     use SoftDeletes;
@@ -68,6 +71,6 @@ class Business extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('status', \App\Enums\BusinessStatus::ACTIVE);
+        return $query->where('status', BusinessStatus::ACTIVE);
     }
 }

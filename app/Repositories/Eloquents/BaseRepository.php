@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 abstract class BaseRepository implements BaseRepositoryInterface
 {
-    public function __construct(
-        protected Model $model
-    ) {}
+    public function __construct(protected Model $model) {}
 
     public function all(): Collection
     {
@@ -37,12 +35,14 @@ abstract class BaseRepository implements BaseRepositoryInterface
     public function update(string|int $id, array $data): bool
     {
         $record = $this->find($id);
+
         return $record ? $record->update($data) : false;
     }
 
     public function delete(string|int $id): bool
     {
         $record = $this->find($id);
+
         return $record ? $record->delete() : false;
     }
 

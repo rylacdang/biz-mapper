@@ -17,12 +17,8 @@ class BusinessService
     /**
      * Handle business registration logic
      */
-    public function registerBusiness(
-        array $data,
-        int $userId,
-        UploadedFile $coverPhoto,
-        ?UploadedFile $logo
-    ): Business {
+    public function registerBusiness(array $data, int $userId, UploadedFile $coverPhoto, ?UploadedFile $logo): Business
+    {
         $data['user_id'] = $userId;
         $data['slug'] = $this->generateUniqueSlug($data['name']);
 
@@ -39,12 +35,8 @@ class BusinessService
     /**
      * Handle business update logic — replaces files only when new ones are uploaded.
      */
-    public function updateBusiness(
-        Business $business,
-        array $data,
-        ?UploadedFile $coverPhoto,
-        ?UploadedFile $logo,
-    ): bool {
+    public function updateBusiness(Business $business, array $data, ?UploadedFile $coverPhoto, ?UploadedFile $logo): bool
+    {
         // Prevent null from validated() overwriting existing file paths
         unset($data['cover_photo'], $data['logo']);
 

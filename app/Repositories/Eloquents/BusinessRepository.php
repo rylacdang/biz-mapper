@@ -56,26 +56,22 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
             ->get();
     }
 
-    public function findTrashed(int|string $id): ?Model
+    public function findTrashedOrFail(int|string $id): Model
     {
         return $this->query()
             ->onlyTrashed()
-            ->find($id);
+            ->findOrFail($id);
     }
 
     public function restoreBusiness(int|string $id): bool
     {
-        $record = $this->findTrashed($id);
-        return $record ? $record->restore() : false;
+        $record = $this->findTrashedOrFail($id);
+
+        return $record->restore();
     }
 
-    public function searchByRadius(
-        float $latitude,
-        float $longitude,
-        float $radius,
-        ?string $keyword = null,
-        ?string $category = null
-    ): Collection {
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    {
         $earthRadius = 6371;
 
         $query = $this->query()->with('category');
