@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeft, MapPin, Phone, Globe, Clock, Store } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { formatBusinessTime } from '@/lib/businessHours';
 import { photoUrl, websiteUrl } from '@/lib/explorer';
 import type { SearchBusiness } from '@/types';
 
@@ -116,7 +117,7 @@ const emit = defineEmits<{ back: [] }>();
                     {{
                         item.hours!.closed
                             ? 'Closed'
-                            : `${item.hours!.open} – ${item.hours!.close}`
+                            : `${formatBusinessTime(item.hours!.open)} – ${formatBusinessTime(item.hours!.close)}`
                     }}
                 </span>
             </div>

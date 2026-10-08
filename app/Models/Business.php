@@ -6,6 +6,7 @@ use App\Enums\BusinessStatus;
 use App\Policies\BusinessPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -44,10 +45,24 @@ class Business extends Model
         return [
             'lat' => 'float',
             'lng' => 'float',
-            'hours' => 'array',
             'status' => BusinessStatus::class,
             'view_count' => 'integer',
         ];
+    }
+
+    /**
+     * Read and save hours with boolean closed flags.
+     */
+    protected function hours(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?array => $value === null
+                ? null
+                : $this->normalizeHours(json_decode($value, true, 512, JSON_THROW_ON_ERROR)),
+            set: fn (?array $value): ?string => $value === null
+                ? null
+                : json_encode($this->normalizeHours($value), JSON_THROW_ON_ERROR),
+        );
     }
 
     /**
@@ -72,5 +87,20 @@ class Business extends Model
     public function scopeActive($query)
     {
         return $query->where('status', BusinessStatus::ACTIVE);
+    }
+
+    /**
+     * Convert each day's closed flag to a boolean.
+     */
+    private function normalizeHours(array $hours): array
+    {
+        foreach ($hours as &$day) {
+            if (is_array($day) && array_key_exists('closed', $day)) {
+                // Multipart uploads send boolean values as strings.
+                $day['closed'] = filter_var($day['closed'], FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+
+        return $hours;
     }
 }

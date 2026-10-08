@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MapPin } from 'lucide-vue-next';
 import { computed, nextTick, ref, useId, watch } from 'vue';
+import RequiredMark from '@/components/explorer/RequiredMark.vue';
 import type { AddressSuggestion } from '@/types';
 
 const model = defineModel<string>({ required: true });
@@ -85,9 +86,9 @@ async function handleKeydown(event: KeyboardEvent) {
 
 <template>
     <div ref="root" class="relative mt-[17px]" @focusout="handleFocusOut">
-        <label :for="id" class="mb-2 block text-[11px] font-bold"
-            >Street address</label
-        >
+        <label :for="id" class="mb-2 block text-[11px] font-bold">
+            Street address <RequiredMark />
+        </label>
         <input
             :id="id"
             ref="input"

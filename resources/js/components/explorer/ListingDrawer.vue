@@ -3,6 +3,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import { X, ArrowLeft, ArrowRight, ImagePlus, Trash2 } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import LocationPicker from '@/components/explorer/LocationPicker.vue';
+import RequiredMark from '@/components/explorer/RequiredMark.vue';
 import StreetAddressInput from '@/components/explorer/StreetAddressInput.vue';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { useListingAddress } from '@/composables/useListingAddress';
@@ -98,6 +99,7 @@ const {
 } = address;
 
 const preview = ref(photoUrl(props.listing?.cover_photo));
+const logoPreview = ref(photoUrl(props.listing?.logo));
 const urls: string[] = [];
 const saved = computed(() => Boolean(props.listing));
 const ownerLocation = useExplorerLocation();
@@ -147,13 +149,21 @@ onMounted(() => {
 onUnmounted(() => urls.forEach((url) => URL.revokeObjectURL(url)));
 
 function handleUpload(event: Event, field: 'cover_photo' | 'logo') {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    const file = (event.target as HTMLInputElement).files?.[0];
+
+    if (!file) {
+        return;
+    }
+
     form[field] = file;
 
-    if (field === 'cover_photo' && file) {
-        const url = URL.createObjectURL(file);
-        urls.push(url);
+    const url = URL.createObjectURL(file);
+    urls.push(url);
+
+    if (field === 'cover_photo') {
         preview.value = url;
+    } else {
+        logoPreview.value = url;
     }
 }
 
@@ -318,14 +328,14 @@ function handleDelete() {
 
             <!-- Four-step progress navigation -->
             <nav
-                class="flex gap-[10px] border-b border-[#edf1f6] px-[25px] py-5 max-md:gap-[6px] max-md:px-3 max-md:py-4"
+                class="grid grid-cols-4 gap-2 border-b border-[#edf1f6] px-5 py-4 max-md:px-3"
                 aria-label="Listing steps"
             >
                 <button
                     :class="[
-                        'group/step flex flex-1 items-center gap-[5px] border-0 bg-transparent p-0 text-[10px]',
-                        'whitespace-nowrap text-[#a1aec0] data-[active=true]:font-[700]',
-                        'data-[active=true]:text-explorer-blue max-md:gap-[3px] max-md:text-[9px]',
+                        'group/step flex min-w-0 flex-col items-center gap-2 border-0 bg-transparent p-0 text-[10px] md:flex-row',
+                        'text-[#a1aec0] data-[active=true]:font-[700]',
+                        'data-[active=true]:text-explorer-blue',
                     ]"
                     v-for="(label, index) in steps"
                     :key="label"
@@ -345,7 +355,11 @@ function handleDelete() {
                     >
                         {{ index + 1 }}
                     </span>
-                    {{ label }}
+                    <span
+                        class="min-h-7 text-center leading-[14px] md:min-h-0 md:text-left"
+                    >
+                        {{ label }}
+                    </span>
                 </button>
             </nav>
 
@@ -373,13 +387,13 @@ function handleDelete() {
                     <label
                         class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
                     >
-                        Business name
+                        <span>Business name <RequiredMark /></span>
                         <input
                             class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
                             v-model="form.name"
                             required
                             maxlength="255"
-                            placeholder="Your neighborhood favorite"
+                            placeholder="Enter business name"
                         />
                     </label>
 
@@ -392,7 +406,7 @@ function handleDelete() {
                     <label
                         class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
                     >
-                        Category
+                        <span>Category <RequiredMark /></span>
                         <select
                             class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                             v-model="form.category_id"
@@ -419,7 +433,7 @@ function handleDelete() {
                     <label
                         class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
                     >
-                        Description
+                        <span>Description <RequiredMark /></span>
                         <textarea
                             class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                             v-model="form.description"
@@ -479,11 +493,14 @@ function handleDelete() {
                             ]"
                         >
                             <ImagePlus :size="26" />
-                            {{
-                                preview
-                                    ? 'Change cover photo'
-                                    : 'Choose a cover photo'
-                            }}
+                            <span>
+                                {{
+                                    preview
+                                        ? 'Change cover photo'
+                                        : 'Choose a cover photo'
+                                }}
+                                <RequiredMark v-if="!saved" />
+                            </span>
                             <small
                                 :class="[
                                     'text-[10px] font-[400]',
@@ -501,6 +518,7 @@ function handleDelete() {
                             type="file"
                             accept="image/*"
                             aria-label="Cover photo"
+                            :aria-required="!saved"
                             @change="handleUpload($event, 'cover_photo')"
                         />
                     </label>
@@ -511,21 +529,71 @@ function handleDelete() {
                         {{ form.errors.cover_photo }}
                     </p>
 
-                    <label
+                    <div
                         class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
                     >
-                        Logo
-                        <small class="text-[10px] font-[400] text-[#90a0b6]">
-                            optional · up to 2 MB
-                        </small>
+                        <span class="flex items-center gap-2">
+                            Logo
+                            <small
+                                class="text-[10px] font-normal text-slate-400"
+                            >
+                                Optional
+                            </small>
+                        </span>
 
-                        <input
-                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
-                            type="file"
-                            accept="image/*"
-                            @change="handleUpload($event, 'logo')"
-                        />
-                    </label>
+                        <label
+                            class="relative flex cursor-pointer items-center gap-4 rounded-xl border border-explorer-line bg-white p-4 transition-colors hover:border-blue-300 hover:bg-blue-50/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-explorer-blue has-[:focus-visible]:ring-offset-2 motion-reduce:transition-none"
+                        >
+                            <span
+                                class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-explorer-line bg-slate-50"
+                            >
+                                <img
+                                    v-if="logoPreview"
+                                    :src="logoPreview"
+                                    alt="Business logo preview"
+                                    class="h-full w-full object-contain p-1.5"
+                                />
+                                <ImagePlus
+                                    v-else
+                                    :size="24"
+                                    class="text-slate-400"
+                                    aria-hidden="true"
+                                />
+                            </span>
+
+                            <span class="flex min-w-0 flex-1 flex-col gap-1.5">
+                                <span
+                                    class="truncate text-xs text-explorer-ink"
+                                >
+                                    {{
+                                        form.logo?.name ?? 'Your business logo'
+                                    }}
+                                </span>
+                                <span
+                                    class="text-[10px] font-normal text-slate-400"
+                                >
+                                    JPG, PNG or WebP · up to 2 MB
+                                </span>
+                                <span
+                                    class="text-xs font-semibold text-explorer-blue"
+                                >
+                                    {{
+                                        logoPreview
+                                            ? 'Change logo'
+                                            : 'Choose logo'
+                                    }}
+                                </span>
+                            </span>
+
+                            <input
+                                class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                type="file"
+                                accept="image/*"
+                                aria-label="Logo"
+                                @change="handleUpload($event, 'logo')"
+                            />
+                        </label>
+                    </div>
 
                     <p
                         class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
@@ -585,37 +653,60 @@ function handleDelete() {
                     <p
                         class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
                     >
-                        Set your usual hours for each day.
+                        Turn on the days you’re open, then set your hours.
+                    </p>
+
+                    <p class="mb-2 text-[11px] font-bold">
+                        Weekly schedule <RequiredMark />
                     </p>
 
                     <div
                         v-for="day in days"
                         :key="day"
-                        class="flex min-h-[65px] items-center justify-between gap-3 border-b border-[#edf1f6] px-0 py-[14px]"
+                        class="grid min-h-[65px] grid-cols-2 items-center gap-x-4 gap-y-3 border-b border-[#edf1f6] py-4 md:grid-cols-[minmax(0,1fr)_96px_232px]"
                     >
-                        <label
-                            class="flex items-center gap-[6px] text-[11px] capitalize max-md:text-[10px]"
-                        >
-                            <input
-                                v-model="form.hours[day].closed"
-                                type="checkbox"
-                                :aria-label="`${day} closed`"
-                            />
+                        <span class="text-xs font-medium capitalize">
                             {{ day }}
-                            <small
-                                class="text-[10px] font-[400] text-[#90a0b6]"
-                                v-if="form.hours[day].closed"
+                        </span>
+
+                        <button
+                            type="button"
+                            role="switch"
+                            :aria-label="`${day} open`"
+                            :aria-checked="!form.hours[day].closed"
+                            class="flex w-24 items-center gap-2 justify-self-end rounded-md p-1 text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-explorer-blue"
+                            @click="
+                                form.hours[day].closed = !form.hours[day].closed
+                            "
+                        >
+                            <span
+                                :class="[
+                                    'relative h-5 w-9 rounded-full transition-colors motion-reduce:transition-none',
+                                    form.hours[day].closed
+                                        ? 'bg-slate-300'
+                                        : 'bg-explorer-blue',
+                                ]"
+                                aria-hidden="true"
                             >
-                                Closed
-                            </small>
-                        </label>
+                                <span
+                                    :class="[
+                                        'absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none',
+                                        !form.hours[day].closed &&
+                                            'translate-x-4',
+                                    ]"
+                                />
+                            </span>
+                            <span class="w-10 text-left" aria-hidden="true">
+                                {{ form.hours[day].closed ? 'Closed' : 'Open' }}
+                            </span>
+                        </button>
 
                         <div
-                            class="flex items-center gap-[5px]"
+                            class="col-span-2 flex min-w-0 items-center gap-2 md:col-span-1"
                             v-if="!form.hours[day].closed"
                         >
                             <input
-                                class="w-[105px] min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink max-md:w-[90px]"
+                                class="min-w-0 flex-1 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink"
                                 v-model="form.hours[day].open"
                                 type="time"
                                 :aria-label="`${day} opening time`"
@@ -624,12 +715,18 @@ function handleDelete() {
                             <span>–</span>
 
                             <input
-                                class="w-[105px] min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink max-md:w-[90px]"
+                                class="min-w-0 flex-1 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink"
                                 v-model="form.hours[day].close"
                                 type="time"
                                 :aria-label="`${day} closing time`"
                             />
                         </div>
+                        <span
+                            v-else
+                            class="col-span-2 text-xs text-slate-400 md:col-span-1"
+                        >
+                            Closed for the day
+                        </span>
                     </div>
 
                     <p
@@ -803,7 +900,7 @@ function handleDelete() {
                         <label
                             class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
-                            Latitude
+                            <span>Latitude <RequiredMark /></span>
                             <input
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
                                 v-model.number="form.lat"
@@ -819,7 +916,7 @@ function handleDelete() {
                         <label
                             class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
-                            Longitude
+                            <span>Longitude <RequiredMark /></span>
                             <input
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
                                 v-model.number="form.lng"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Search, SlidersHorizontal } from 'lucide-vue-next';
+import { categoryIcon } from '@/lib/categoryIcons';
 import type { Category } from '@/types';
 
 withDefaults(
@@ -88,10 +89,13 @@ const emit = defineEmits<{ search: []; reset: [] }>();
                 :data-active="category === item.name"
                 @click="category = item.name"
             >
-                <span
-                    class="h-[5px] w-[5px] rounded-[50%]"
-                    :style="{ background: item.color }"
-                ></span>
+                <component
+                    :is="categoryIcon(item.icon)"
+                    :size="14"
+                    class="shrink-0"
+                    :style="{ color: item.color }"
+                    aria-hidden="true"
+                />
                 {{ item.name }}
             </button>
         </div>

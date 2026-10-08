@@ -1,6 +1,7 @@
 import type { FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as CityMap, Marker } from 'maplibre-gl';
 import { onUnmounted, ref, shallowRef } from 'vue';
+import { categoryIconImage } from '@/lib/categoryIcons';
 import { MAP_STYLE } from '@/lib/explorer';
 import { maplibregl } from '@/lib/maplibre';
 import type {
@@ -34,7 +35,7 @@ export function useCityMap(
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Generate category sprites locally so map pins need no external icon service.
-    function markerImage(category: Category) {
+    async function markerImage(category: Category) {
         const canvas = document.createElement('canvas');
         canvas.width = 88;
         canvas.height = 104;
@@ -57,29 +58,11 @@ export function useCityMap(
         ctx.lineTo(44, 90);
         ctx.lineTo(54, 70);
         ctx.fill();
-        const glyphs: Record<string, string> = {
-            BuildingStorefrontIcon: '▦',
-            FireIcon: '♨',
-            CakeIcon: '♨',
-            ShoppingBagIcon: '▢',
-            HeartIcon: '♥',
-            AcademicCapIcon: '✎',
-            ScissorsIcon: '✂',
-            WrenchScrewdriverIcon: '⚒',
-            TruckIcon: '↗',
-            HomeIcon: '⌂',
-            SparklesIcon: '✦',
-            WifiIcon: '⌁',
-        };
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 29px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-            glyphs[category.icon] ?? category.name.slice(0, 1),
-            44,
-            42,
-        );
+        const icon = await categoryIconImage(category.icon);
+
+        if (icon) {
+            ctx.drawImage(icon, 26, 24, 36, 36);
+        }
 
         return ctx.getImageData(0, 0, 88, 104);
     }
@@ -116,7 +99,11 @@ export function useCityMap(
                     move({ lat: current.lat, lng: current.lng });
                 }
             });
-            map.on('load', () => {
+            map.on('load', async () => {
+                const categoryImages = await Promise.all(
+                    categories.map(markerImage),
+                );
+
                 if (disposed || !map) {
                     return;
                 }
@@ -166,8 +153,8 @@ export function useCityMap(
                 }
 
                 // Clusters, pins, and the selection highlight share one business source.
-                categories.forEach((c) =>
-                    map!.addImage(`category-${c.id}`, markerImage(c), {
+                categories.forEach((c, index) =>
+                    map!.addImage(`category-${c.id}`, categoryImages[index], {
                         pixelRatio: 2,
                     }),
                 );
