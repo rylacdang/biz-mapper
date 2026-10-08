@@ -2,7 +2,9 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Compass, LocateFixed, Minus, Plus, Layers } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
+import UserLocationMarker from '@/components/explorer/UserLocationMarker.vue';
 import { useCityMap } from '@/composables/useCityMap';
+import { readSearch } from '@/lib/explorer';
 import type {
     Category,
     Coordinates,
@@ -31,23 +33,45 @@ const container = ref<HTMLElement>();
 
 const locationError = ref('');
 const locating = ref(false);
+const accuracy = ref(0);
 
 let alive = true;
+let mapInitialized = false;
 
 const city = useCityMap(
     (id) => emit('select', id),
     (center) => emit('move', center),
 );
-const { ready, error, is3d } = city;
+const { ready, error, is3d, userMarkerElement } = city;
 
 onMounted(() => {
-    if (container.value) {
-        city.init(container.value, props.center, props.categories, () => {
-            city.setPlaces(props.places);
-            city.setRadius(props.radius);
-        });
+    // Resolve fresh-visit location before creating the map, avoiding a Makati flash.
+    // Explicit search links retain their area for reload and history restoration.
+    if (readSearch(window.location.href)) {
+        initializeMap(props.center);
+    } else {
+        handleLocate();
     }
 });
+
+function initializeMap(center: Coordinates, atUserLocation = false) {
+    if (!container.value || mapInitialized || !alive) {
+        return;
+    }
+
+    mapInitialized = true;
+    city.init(
+        container.value,
+        center,
+        props.categories,
+        () => {
+            city.setPlaces(props.places);
+            city.setRadius(props.radius);
+        },
+        atUserLocation ? 18.5 : 15,
+        atUserLocation ? 40 : undefined,
+    );
+}
 
 // Keep the canvas synchronized with Vue state without rebuilding the map instance.
 watch(() => props.places, city.setPlaces);
@@ -77,11 +101,17 @@ watch(
 );
 
 function handleLocate() {
-    // Request permission only from this action; denial leaves normal discovery usable.
+    // Reuse one location request for first load and the My location control.
+    if (locating.value) {
+        return;
+    }
+
     locationError.value = '';
 
     if (!navigator.geolocation) {
-        locationError.value = 'Location isn’t available in this browser.';
+        locationError.value =
+            'This browser cannot provide your location. Showing the default area.';
+        initializeMap(props.center);
 
         return;
     }
@@ -97,18 +127,33 @@ function handleLocate() {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
             };
-            city.focus(center, props.panelOpen);
+            initializeMap(center, true);
+            accuracy.value = position.coords.accuracy;
+            city.setUserLocation({ ...center, accuracy: accuracy.value });
+            city.focus(center, props.panelOpen, 18.5, is3d.value ? 40 : 0);
             emit('locate', center);
             locating.value = false;
         },
-        () => {
+        (failure) => {
             if (alive) {
+                const messages: Record<number, string> = {
+                    1: 'Location permission is blocked. Allow location for this site, then tap My location.',
+                    2: 'Your device could not determine its location. Check location services, then tap My location.',
+                    3: 'Finding your location took too long. Tap My location to retry.',
+                };
                 locationError.value =
-                    'Location wasn’t available. You can move the map and search anywhere.';
+                    messages[failure.code] ??
+                    'Location is unavailable. Tap My location to retry.';
+
+                if (!mapInitialized) {
+                    locationError.value += ' Showing the default area.';
+                    initializeMap(props.center);
+                }
+
                 locating.value = false;
             }
         },
-        { timeout: 8000 },
+        { enableHighAccuracy: true, maximumAge: 60000, timeout: 20000 },
     );
 }
 
@@ -118,6 +163,11 @@ onUnmounted(() => {
 </script>
 
 <template>
+    <!-- Vue owns the marker content; MapLibre owns its geographic position -->
+    <Teleport v-if="userMarkerElement" :to="userMarkerElement">
+        <UserLocationMarker :accuracy="accuracy" />
+    </Teleport>
+
     <!-- MapLibre canvas -->
     <div
         ref="container"
@@ -142,7 +192,7 @@ onUnmounted(() => {
         <span
             class="mr-[10px] inline-block h-2 w-2 rounded-[50%] bg-explorer-blue motion-safe:animate-pulse"
         ></span>
-        Opening your neighborhood…
+        {{ locating ? 'Finding your location…' : 'Opening your neighborhood…' }}
     </div>
 
     <div

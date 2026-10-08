@@ -1,6 +1,6 @@
 import type { FeatureCollection } from 'geojson';
-import type { GeoJSONSource, Map as CityMap } from 'maplibre-gl';
-import { onUnmounted, ref } from 'vue';
+import type { GeoJSONSource, Map as CityMap, Marker } from 'maplibre-gl';
+import { onUnmounted, ref, shallowRef } from 'vue';
 import { MAP_STYLE } from '@/lib/explorer';
 import { maplibregl } from '@/lib/maplibre';
 import type {
@@ -8,6 +8,7 @@ import type {
     Coordinates,
     SearchBusiness,
     SearchState,
+    UserLocation,
 } from '@/types';
 
 export function useCityMap(
@@ -19,6 +20,10 @@ export function useCityMap(
     let disposed = false;
     let buildings = false;
     let resize: ResizeObserver | undefined;
+    let userMarker: Marker | undefined;
+    let userLocation: UserLocation | undefined;
+
+    const userMarkerElement = shallowRef<HTMLElement>();
 
     const ready = ref(false);
     const error = ref('');
@@ -84,14 +89,16 @@ export function useCityMap(
         center: Coordinates,
         categories: Category[],
         done: () => void,
+        initialZoom = 15,
+        initialPitch = window.innerWidth < 768 ? 35 : 45,
     ) {
         try {
             map = new maplibregl.Map({
                 container,
                 style: MAP_STYLE,
                 center: [center.lng, center.lat],
-                zoom: 15,
-                pitch: window.innerWidth < 768 ? 35 : 45,
+                zoom: initialZoom,
+                pitch: initialPitch,
                 bearing: -18,
                 maxPitch: 65,
                 attributionControl: { compact: true },
@@ -254,6 +261,7 @@ export function useCityMap(
                     });
                 });
                 ready.value = true;
+                updateUserAccuracy();
                 done();
             });
         } catch {
@@ -296,12 +304,18 @@ export function useCityMap(
         }
     }
 
-    function focus(place: Coordinates, panelVisible = true) {
+    function focus(
+        place: Coordinates,
+        panelVisible = true,
+        minimumZoom = 16,
+        pitch?: number,
+    ) {
         // Camera padding keeps the selected pin clear of the active panel and controls.
         const mobile = window.innerWidth < 768;
         map?.easeTo({
             center: [place.lng, place.lat],
-            zoom: Math.max(map.getZoom(), 16),
+            zoom: Math.max(map.getZoom(), minimumZoom),
+            pitch: pitch ?? map.getPitch(),
             padding: {
                 left: mobile || !panelVisible ? 24 : 380,
                 right: 70,
@@ -312,49 +326,79 @@ export function useCityMap(
         });
     }
 
+    function setUserLocation(location: UserLocation) {
+        if (!map || disposed) {
+            return;
+        }
+
+        userLocation = location;
+
+        if (!userMarker) {
+            // A DOM marker remains above extruded buildings and does not join business clusters.
+            const element = document.createElement('div');
+            element.className = 'z-1 pointer-events-none';
+            userMarkerElement.value = element;
+            userMarker = new maplibregl.Marker({
+                element,
+                anchor: 'bottom',
+                offset: [0, 10],
+                pitchAlignment: 'viewport',
+                rotationAlignment: 'viewport',
+            })
+                .setLngLat([location.lng, location.lat])
+                .addTo(map);
+        } else {
+            userMarker.setLngLat([location.lng, location.lat]);
+        }
+
+        updateUserAccuracy();
+    }
+
+    function updateUserAccuracy() {
+        if (!ready.value || !map || !userLocation) {
+            return;
+        }
+
+        // Browser accuracy is measured in meters; reuse the kilometer-based geodesic ring.
+        const data = radiusGeometry(userLocation, userLocation.accuracy / 1000);
+
+        if (map.getSource('user-accuracy')) {
+            (map.getSource('user-accuracy') as GeoJSONSource).setData(data);
+
+            return;
+        }
+
+        map.addSource('user-accuracy', { type: 'geojson', data });
+        map.addLayer(
+            {
+                id: 'user-accuracy-fill',
+                type: 'fill',
+                source: 'user-accuracy',
+                paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.08 },
+            },
+            'clusters',
+        );
+        map.addLayer(
+            {
+                id: 'user-accuracy-line',
+                type: 'line',
+                source: 'user-accuracy',
+                paint: {
+                    'line-color': '#2563eb',
+                    'line-opacity': 0.25,
+                    'line-width': 1,
+                },
+            },
+            'clusters',
+        );
+    }
+
     function setRadius(state: SearchState | null) {
         if (!ready.value || !map) {
             return;
         }
 
-        // Use a geodesic ring so radius stays in kilometers across map latitudes.
-        const points: number[][] = [];
-
-        if (state) {
-            for (let i = 0; i <= 96; i++) {
-                const angle = (i / 96) * Math.PI * 2;
-                const d = state.radius / 6371;
-                const lat = (state.lat * Math.PI) / 180;
-                const lng = (state.lng * Math.PI) / 180;
-                const targetLat = Math.asin(
-                    Math.sin(lat) * Math.cos(d) +
-                        Math.cos(lat) * Math.sin(d) * Math.cos(angle),
-                );
-                const targetLng =
-                    lng +
-                    Math.atan2(
-                        Math.sin(angle) * Math.sin(d) * Math.cos(lat),
-                        Math.cos(d) - Math.sin(lat) * Math.sin(targetLat),
-                    );
-                points.push([
-                    (targetLng * 180) / Math.PI,
-                    (targetLat * 180) / Math.PI,
-                ]);
-            }
-        }
-
-        const data: FeatureCollection = {
-            type: 'FeatureCollection',
-            features: state
-                ? [
-                      {
-                          type: 'Feature',
-                          properties: {},
-                          geometry: { type: 'Polygon', coordinates: [points] },
-                      },
-                  ]
-                : [],
-        };
+        const data = radiusGeometry(state, state?.radius ?? 0);
 
         if (map.getSource('radius')) {
             (map.getSource('radius') as GeoJSONSource).setData(data);
@@ -386,6 +430,50 @@ export function useCityMap(
         }
     }
 
+    function radiusGeometry(
+        center: Coordinates | null,
+        radius: number,
+    ): FeatureCollection {
+        // Use a geodesic ring so distance stays in kilometers across map latitudes.
+        const points: number[][] = [];
+
+        if (center) {
+            for (let i = 0; i <= 96; i++) {
+                const angle = (i / 96) * Math.PI * 2;
+                const d = radius / 6371;
+                const lat = (center.lat * Math.PI) / 180;
+                const lng = (center.lng * Math.PI) / 180;
+                const targetLat = Math.asin(
+                    Math.sin(lat) * Math.cos(d) +
+                        Math.cos(lat) * Math.sin(d) * Math.cos(angle),
+                );
+                const targetLng =
+                    lng +
+                    Math.atan2(
+                        Math.sin(angle) * Math.sin(d) * Math.cos(lat),
+                        Math.cos(d) - Math.sin(lat) * Math.sin(targetLat),
+                    );
+                points.push([
+                    (targetLng * 180) / Math.PI,
+                    (targetLat * 180) / Math.PI,
+                ]);
+            }
+        }
+
+        return {
+            type: 'FeatureCollection',
+            features: center
+                ? [
+                      {
+                          type: 'Feature',
+                          properties: {},
+                          geometry: { type: 'Polygon', coordinates: [points] },
+                      },
+                  ]
+                : [],
+        };
+    }
+
     function toggle3d() {
         is3d.value = !is3d.value;
         map?.easeTo({
@@ -405,6 +493,7 @@ export function useCityMap(
     onUnmounted(() => {
         disposed = true;
         resize?.disconnect();
+        userMarker?.remove();
         map?.remove();
     });
 
@@ -413,6 +502,8 @@ export function useCityMap(
         ready,
         error,
         is3d,
+        userMarkerElement,
+        setUserLocation,
         setPlaces,
         moveCenter,
         highlight,

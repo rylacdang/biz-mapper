@@ -10,6 +10,10 @@ export interface Coordinates {
     lng: number;
 }
 
+export interface UserLocation extends Coordinates {
+    accuracy: number;
+}
+
 export interface OpeningHours {
     open: string;
     close: string;
