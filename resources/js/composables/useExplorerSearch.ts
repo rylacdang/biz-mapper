@@ -20,7 +20,11 @@ export function useExplorerSearch(
     const results = ref<SearchBusiness[] | null>(null);
     const loading = ref(false);
     const error = ref('');
+    const initialSearch = readSearch(
+        typeof window !== 'undefined' ? window.location.href : '/',
+    );
     const lastSearch = ref<SearchState | null>(null);
+    const searchArea = ref<SearchState | null>(initialSearch);
     const moved = ref(false);
 
     const requests = latestRequest();
@@ -45,6 +49,8 @@ export function useExplorerSearch(
             radius: radius.value,
         };
         const request = requests.start();
+        // The radius is known before the listings response arrives.
+        searchArea.value = target;
         loading.value = true;
         error.value = '';
 
@@ -103,6 +109,7 @@ export function useExplorerSearch(
         clearTimeout(timer);
         results.value = null;
         lastSearch.value = null;
+        searchArea.value = null;
         error.value = '';
         loading.value = false;
         moved.value = false;
@@ -190,13 +197,11 @@ export function useExplorerSearch(
         loading,
         error,
         lastSearch,
+        searchArea,
         moved,
         search,
         reset,
         restore,
-        initialCenter:
-            readSearch(
-                typeof window !== 'undefined' ? window.location.href : '/',
-            ) ?? DEFAULT_CENTER,
+        initialCenter: initialSearch ?? DEFAULT_CENTER,
     };
 }

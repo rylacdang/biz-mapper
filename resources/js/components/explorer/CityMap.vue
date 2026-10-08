@@ -4,6 +4,7 @@ import { Compass, LocateFixed, Minus, Plus, Layers } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import UserLocationMarker from '@/components/explorer/UserLocationMarker.vue';
 import { useCityMap } from '@/composables/useCityMap';
+import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { readSearch } from '@/lib/explorer';
 import type {
     Category,
@@ -31,9 +32,8 @@ const emit = defineEmits<{
 
 const container = ref<HTMLElement>();
 
-const locationError = ref('');
-const locating = ref(false);
-const accuracy = ref(0);
+const location = useExplorerLocation();
+const { error: locationError, locating, accuracy } = location;
 
 let alive = true;
 let mapInitialized = false;
@@ -45,16 +45,16 @@ const city = useCityMap(
 const { ready, error, is3d, userMarkerElement } = city;
 
 onMounted(() => {
-    // Resolve fresh-visit location before creating the map, avoiding a Makati flash.
-    // Explicit search links retain their area for reload and history restoration.
+    // Saved search coordinates describe the search area, not the user's location.
     if (readSearch(window.location.href)) {
-        initializeMap(props.center);
+        initializeMap(props.center, true);
+        handleLocate(false);
     } else {
         handleLocate();
     }
 });
 
-function initializeMap(center: Coordinates, atUserLocation = false) {
+function initializeMap(center: Coordinates, closeUp = false) {
     if (!container.value || mapInitialized || !alive) {
         return;
     }
@@ -68,8 +68,8 @@ function initializeMap(center: Coordinates, atUserLocation = false) {
             city.setPlaces(props.places);
             city.setRadius(props.radius);
         },
-        atUserLocation ? 18.5 : 15,
-        atUserLocation ? 40 : undefined,
+        closeUp ? 18.5 : 15,
+        closeUp ? 40 : undefined,
     );
 }
 
@@ -100,60 +100,34 @@ watch(
     },
 );
 
-function handleLocate() {
+function handleLocate(recenter = true) {
     // Reuse one location request for first load and the My location control.
     if (locating.value) {
         return;
     }
 
-    locationError.value = '';
+    location.locate(
+        (position, first) => {
+            initializeMap(position, true);
+            city.setUserLocation(position);
 
-    if (!navigator.geolocation) {
-        locationError.value =
-            'This browser cannot provide your location. Showing the default area.';
-        initializeMap(props.center);
-
-        return;
-    }
-
-    locating.value = true;
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            if (!alive) {
-                return;
-            }
-
-            const center = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-            };
-            initializeMap(center, true);
-            accuracy.value = position.coords.accuracy;
-            city.setUserLocation({ ...center, accuracy: accuracy.value });
-            city.focus(center, props.panelOpen, 18.5, is3d.value ? 40 : 0);
-            emit('locate', center);
-            locating.value = false;
-        },
-        (failure) => {
-            if (alive) {
-                const messages: Record<number, string> = {
-                    1: 'Location permission is blocked. Allow location for this site, then tap My location.',
-                    2: 'Your device could not determine its location. Check location services, then tap My location.',
-                    3: 'Finding your location took too long. Tap My location to retry.',
-                };
-                locationError.value =
-                    messages[failure.code] ??
-                    'Location is unavailable. Tap My location to retry.';
-
-                if (!mapInitialized) {
-                    locationError.value += ' Showing the default area.';
-                    initializeMap(props.center);
-                }
-
-                locating.value = false;
+            // Refine the marker without moving the camera or repeating the search.
+            if (recenter && first) {
+                city.focus(
+                    position,
+                    props.panelOpen,
+                    18.5,
+                    is3d.value ? 40 : 0,
+                );
+                emit('locate', position);
             }
         },
-        { enableHighAccuracy: true, maximumAge: 60000, timeout: 20000 },
+        () => {
+            if (!mapInitialized) {
+                locationError.value += ' Showing the default area.';
+                initializeMap(props.center);
+            }
+        },
     );
 }
 
@@ -284,7 +258,7 @@ onUnmounted(() => {
             :disabled="locating"
             aria-label="My location"
             title="My location"
-            @click="handleLocate"
+            @click="handleLocate()"
         >
             <LocateFixed :size="21" />
         </button>

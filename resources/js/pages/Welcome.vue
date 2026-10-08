@@ -49,6 +49,7 @@ const {
     loading,
     error,
     lastSearch,
+    searchArea,
     moved,
 } = searchState;
 
@@ -312,7 +313,7 @@ onUnmounted(removeNavigation);
             :categories="categories"
             :center="lastSearch ?? searchState.initialCenter"
             :selected="selected"
-            :radius="lastSearch"
+            :radius="searchArea"
             :moved="moved && !workspace"
             @select="handleSelectBusiness"
             @move="handleMapMove"
