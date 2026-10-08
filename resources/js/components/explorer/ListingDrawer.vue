@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
-import {
-    X,
-    ArrowLeft,
-    ArrowRight,
-    ImagePlus,
-    MapPin,
-    Trash2,
-} from 'lucide-vue-next';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { X, ArrowLeft, ArrowRight, ImagePlus, Trash2 } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import LocationPicker from '@/components/explorer/LocationPicker.vue';
+import StreetAddressInput from '@/components/explorer/StreetAddressInput.vue';
+import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { useListingAddress } from '@/composables/useListingAddress';
 import {
     DEFAULT_CENTER,
@@ -18,11 +13,18 @@ import {
     listingSubmission,
 } from '@/lib/explorer';
 import business from '@/routes/owner/business';
-import type { Business, Category, Coordinates, OpeningHours } from '@/types';
+import type {
+    AddressSuggestion,
+    Business,
+    Category,
+    Coordinates,
+    OpeningHours,
+} from '@/types';
 
 const props = defineProps<{
     listing: Business | null;
     categories: Category[];
+    initialLocation?: Coordinates | null;
 }>();
 
 const emit = defineEmits<{ close: [] }>();
@@ -55,7 +57,7 @@ const hours: Record<string, OpeningHours> = Object.fromEntries(
 
 const coordinates = props.listing
     ? listingCoordinates(props.listing)
-    : DEFAULT_CENTER;
+    : (props.initialLocation ?? DEFAULT_CENTER);
 
 const form = useForm({
     category_id: String(props.listing?.category_id ?? ''),
@@ -88,16 +90,57 @@ const {
     cities,
     barangays,
     error: addressError,
-    locating,
+    locating: suggestionsLoading,
+    suggestions,
+    suggestionError,
+    searched,
+    matchingLocation,
 } = address;
 
 const preview = ref(photoUrl(props.listing?.cover_photo));
 const urls: string[] = [];
 const saved = computed(() => Boolean(props.listing));
+const ownerLocation = useExplorerLocation();
+const { error: locationError } = ownerLocation;
+const positionReady = ref(Boolean(props.listing || props.initialLocation));
+
+let locationChosen = false;
+let applyingLocation = false;
+
+// A pin move, numeric edit, or address lookup takes priority over device location.
+watch(
+    () => [form.lat, form.lng],
+    () => {
+        if (!applyingLocation) {
+            locationChosen = true;
+            positionReady.value = true;
+        }
+    },
+    { flush: 'sync' },
+);
 
 onMounted(() => {
     dialog.value?.showModal();
     void address.init();
+
+    if (!saved.value) {
+        ownerLocation.locate(
+            (position) => {
+                if (locationChosen) {
+                    return;
+                }
+
+                applyingLocation = true;
+                form.lat = position.lat;
+                form.lng = position.lng;
+                applyingLocation = false;
+                positionReady.value = true;
+            },
+            () => {
+                positionReady.value = true;
+            },
+        );
+    }
 });
 
 // Object URLs live only as long as this drawer instance.
@@ -114,11 +157,35 @@ function handleUpload(event: Event, field: 'cover_photo' | 'logo') {
     }
 }
 
+function handleDialogCancel(event: Event) {
+    // File picker cancellation bubbles but must not close the listing drawer.
+    if (event.target !== dialog.value) {
+        return;
+    }
+
+    if (!form.processing && !deleting.value) {
+        emit('close');
+    }
+}
+
+function handleSelectAddress(suggestion: AddressSuggestion) {
+    locationChosen = true;
+    positionReady.value = true;
+    void address.selectSuggestion(suggestion);
+}
+
 function handlePlacePin(coords: Coordinates) {
     // A manual choice wins even if an earlier address lookup is still pending.
     address.cancelLookup();
+    locationChosen = true;
     form.lat = coords.lat;
     form.lng = coords.lng;
+}
+
+function handleCoordinateInput() {
+    locationChosen = true;
+    positionReady.value = true;
+    address.cancelLookup();
 }
 
 function handleNextStep() {
@@ -211,7 +278,7 @@ function handleDelete() {
             'max-md:w-full max-md:rounded-[0]',
         ]"
         aria-labelledby="listing-title"
-        @cancel.prevent="!form.processing && !deleting && emit('close')"
+        @cancel.prevent="handleDialogCancel"
     >
         <form
             class="flex h-full flex-col"
@@ -390,9 +457,9 @@ function handleDelete() {
 
                     <label
                         :class="[
-                            'relative mt-[17px] flex h-[185px] flex-col items-center justify-center gap-2',
+                            'group/cover relative mt-[17px] flex h-[185px] cursor-pointer flex-col items-center justify-center gap-2',
                             'overflow-hidden rounded-[13px] border border-dashed border-[#b8cbe6] bg-[#f2f6fc]',
-                            'text-[11px] font-[700] text-[#6387bb]',
+                            'text-[11px] font-[700] text-[#6387bb] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-explorer-blue has-[:focus-visible]:ring-offset-2',
                         ]"
                     >
                         <img
@@ -403,7 +470,13 @@ function handleDelete() {
                         />
 
                         <span
-                            class="z-1 flex flex-col items-center gap-2 rounded-[10px] bg-[#ffffffde] p-[14px]"
+                            :class="[
+                                'pointer-events-none absolute inset-0 z-1 flex flex-col items-center justify-center gap-2 p-[14px]',
+                                'transition-opacity duration-200 motion-reduce:transition-none',
+                                preview
+                                    ? 'bg-black/55 text-white opacity-0 backdrop-blur-sm group-hover/cover:opacity-100 group-has-[:focus-visible]/cover:opacity-100 [@media(hover:none)_and_(pointer:coarse)]:opacity-100'
+                                    : 'text-[#6387bb]',
+                            ]"
                         >
                             <ImagePlus :size="26" />
                             {{
@@ -412,7 +485,12 @@ function handleDelete() {
                                     : 'Choose a cover photo'
                             }}
                             <small
-                                class="text-[10px] font-[400] text-[#90a0b6]"
+                                :class="[
+                                    'text-[10px] font-[400]',
+                                    preview
+                                        ? 'text-white/80'
+                                        : 'text-[#90a0b6]',
+                                ]"
                             >
                                 JPG, PNG or WebP · up to 5 MB
                             </small>
@@ -578,31 +656,37 @@ function handleDelete() {
                     <p
                         class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
                     >
-                        Choose your address, then place the pin exactly where
-                        visitors should go.
+                        Choose an address suggestion, then place the pin exactly
+                        where visitors should go.
                     </p>
 
-                    <label
-                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
-                    >
-                        Street address
-                        <input
-                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
-                            v-model="form.address"
-                            required
-                            maxlength="500"
-                            placeholder="Street, building, or unit"
-                        />
-                    </label>
+                    <StreetAddressInput
+                        v-model="form.address"
+                        :suggestions="suggestions"
+                        :loading="suggestionsLoading"
+                        :error="suggestionError"
+                        :searched="searched"
+                        @search="address.requestSuggestions"
+                        @select="handleSelectAddress"
+                    />
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <p
+                        v-if="matchingLocation"
+                        class="mt-4 text-xs text-slate-500"
+                        role="status"
+                    >
+                        Filling your region, city, and barangay…
+                    </p>
+
+                    <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-5">
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
                             Region
                             <select
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                                 v-model="form.region_code"
+                                :disabled="matchingLocation"
                             >
                                 <option value="">Choose region</option>
 
@@ -617,13 +701,14 @@ function handleDelete() {
                         </label>
 
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                             v-if="provinces.length"
                         >
                             Province
                             <select
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                                 v-model="form.province_code"
+                                :disabled="matchingLocation"
                             >
                                 <option value="">All / independent city</option>
 
@@ -638,12 +723,13 @@ function handleDelete() {
                         </label>
 
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
                             City / municipality
                             <select
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                                 v-model="form.city_code"
+                                :disabled="matchingLocation"
                             >
                                 <option value="">Choose city</option>
 
@@ -658,12 +744,13 @@ function handleDelete() {
                         </label>
 
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
                             Barangay
                             <select
                                 class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
                                 v-model="form.barangay_code"
+                                :disabled="matchingLocation"
                             >
                                 <option value="">Choose barangay</option>
 
@@ -678,33 +765,43 @@ function handleDelete() {
                         </label>
                     </div>
 
-                    <button
-                        type="button"
-                        class="mx-0 my-[18px] inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] py-3 text-[12px] font-[700] text-[#56708e]"
-                        :disabled="locating"
-                        @click="address.findOnMap"
-                    >
-                        <MapPin :size="16" />
-                        {{ locating ? 'Finding address…' : 'Find on map' }}
-                    </button>
+                    <section class="mt-6 space-y-3" aria-label="Business pin">
+                        <p
+                            v-if="addressError"
+                            class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
+                            role="status"
+                        >
+                            {{ addressError }}
+                        </p>
 
-                    <p
-                        v-if="addressError"
-                        class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
-                        role="status"
-                    >
-                        {{ addressError }}
-                    </p>
+                        <p
+                            v-if="locationError && !saved"
+                            class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
+                            role="status"
+                        >
+                            {{ locationError }} You can place the business pin
+                            manually.
+                        </p>
 
-                    <LocationPicker
-                        :lat="Number(form.lat)"
-                        :lng="Number(form.lng)"
-                        @change="handlePlacePin"
-                    />
+                        <LocationPicker
+                            v-if="positionReady"
+                            :lat="Number(form.lat)"
+                            :lng="Number(form.lng)"
+                            @change="handlePlacePin"
+                        />
 
-                    <div class="grid grid-cols-2 gap-3">
+                        <p
+                            v-else
+                            class="flex h-60 items-center justify-center rounded-xl bg-slate-50 text-xs text-slate-500"
+                            role="status"
+                        >
+                            Finding your location…
+                        </p>
+                    </section>
+
+                    <div class="mt-5 grid grid-cols-2 gap-4">
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
                             Latitude
                             <input
@@ -715,12 +812,12 @@ function handleDelete() {
                                 max="90"
                                 step="any"
                                 required
-                                @input="address.cancelLookup"
+                                @input="handleCoordinateInput"
                             />
                         </label>
 
                         <label
-                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            class="flex flex-col gap-2 text-[11px] font-[700]"
                         >
                             Longitude
                             <input
@@ -731,7 +828,7 @@ function handleDelete() {
                                 max="180"
                                 step="any"
                                 required
-                                @input="address.cancelLookup"
+                                @input="handleCoordinateInput"
                             />
                         </label>
                     </div>
@@ -817,7 +914,12 @@ function handleDelete() {
 
                 <button
                     class="inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-explorer-blue px-[17px] py-3 text-[12px] font-[700] text-white"
-                    :disabled="form.processing || deleting || locating"
+                    :disabled="
+                        form.processing ||
+                        deleting ||
+                        matchingLocation ||
+                        (step === 3 && !positionReady)
+                    "
                 >
                     {{
                         form.processing

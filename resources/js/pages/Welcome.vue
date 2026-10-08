@@ -36,6 +36,7 @@ const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
 
 const center = ref<Coordinates>(DEFAULT_CENTER);
+const userLocation = ref<Coordinates | null>(null);
 const searchState = useExplorerSearch(
     () => props.allBusinesses,
     () => center.value,
@@ -319,6 +320,7 @@ onUnmounted(removeNavigation);
             @move="handleMapMove"
             @search="handleSearchMapArea"
             @locate="handleLocate"
+            @user-location="userLocation = $event"
         />
 
         <!-- Floating search, account, and owner controls -->
@@ -559,6 +561,7 @@ onUnmounted(removeNavigation);
         <ListingDrawer
             v-if="drawerOpen && owner"
             :listing="editing"
+            :initial-location="userLocation"
             :categories="categories"
             @close="handleCloseDrawer"
         />

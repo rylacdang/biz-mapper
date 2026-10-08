@@ -14,6 +14,14 @@ export interface UserLocation extends Coordinates {
     accuracy: number;
 }
 
+export interface AddressSuggestion extends Coordinates {
+    id: number | string;
+    label: string;
+    city?: string;
+    province?: string;
+    barangay?: string;
+}
+
 export interface OpeningHours {
     open: string;
     close: string;
@@ -51,6 +59,8 @@ export interface PsgcItem {
     code: string;
     name: string;
     province_code?: string | null;
+    region_code?: string;
+    is_city?: boolean;
 }
 
 export interface SearchState extends Coordinates {

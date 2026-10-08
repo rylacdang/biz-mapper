@@ -1,6 +1,8 @@
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import { searchAddresses } from '@/lib/addressSearch';
 import { latestRequest } from '@/lib/explorer';
-import type { PsgcItem } from '@/types';
+import { matchingPlaces, normalizePlaceName } from '@/lib/psgcMatching';
+import type { AddressSuggestion, PsgcItem } from '@/types';
 
 interface AddressFields {
     address: string;
@@ -22,13 +24,23 @@ export function useListingAddress(form: AddressFields) {
     const loading = ref(false);
     const error = ref('');
     const locating = ref(false);
+    const suggestions = ref<AddressSuggestion[]>([]);
+    const suggestionError = ref('');
+    const searched = ref(false);
+    const matchingLocation = ref(false);
 
     const regionRequest = latestRequest();
     const cityRequest = latestRequest();
     const geocodeRequest = latestRequest();
     const controllers = new Set<AbortController>();
+    const selectionRequest = latestRequest();
     let initializing = true;
+    let autofilling = false;
+    let initialization: Promise<void> | undefined;
     let alive = true;
+    let suggestionTimer: ReturnType<typeof setTimeout> | undefined;
+    let selectedAddress = '';
+    const suggestionCache = new Map<string, AddressSuggestion[]>();
 
     async function fetchList(
         endpoint: string,
@@ -39,6 +51,10 @@ export function useListingAddress(form: AddressFields) {
         controllers.add(controller);
         const abort = () => controller.abort();
         signal?.addEventListener('abort', abort, { once: true });
+
+        if (signal?.aborted) {
+            controller.abort();
+        }
 
         try {
             const response = await fetch(
@@ -57,7 +73,11 @@ export function useListingAddress(form: AddressFields) {
         }
     }
 
-    async function init() {
+    function init() {
+        return (initialization ??= loadInitialAddress());
+    }
+
+    async function loadInitialAddress() {
         // Populate existing codes before watchers may clear dependent selections.
         loading.value = true;
 
@@ -91,11 +111,13 @@ export function useListingAddress(form: AddressFields) {
     watch(
         () => form.region_code,
         async (code) => {
-            if (initializing) {
+            if (initializing || autofilling) {
                 return;
             }
 
             const request = regionRequest.start();
+            selectionRequest.cancel();
+            matchingLocation.value = false;
             cityRequest.cancel();
             form.province_code = '';
             form.city_code = '';
@@ -134,7 +156,9 @@ export function useListingAddress(form: AddressFields) {
     watch(
         () => form.province_code,
         () => {
-            if (!initializing) {
+            if (!initializing && !autofilling) {
+                selectionRequest.cancel();
+                matchingLocation.value = false;
                 form.city_code = '';
                 form.barangay_code = '';
             }
@@ -144,11 +168,13 @@ export function useListingAddress(form: AddressFields) {
     watch(
         () => form.city_code,
         async (code) => {
-            if (initializing) {
+            if (initializing || autofilling) {
                 return;
             }
 
             const request = cityRequest.start();
+            selectionRequest.cancel();
+            matchingLocation.value = false;
             form.barangay_code = '';
             barangays.value = [];
 
@@ -175,62 +201,29 @@ export function useListingAddress(form: AddressFields) {
         },
     );
 
-    async function findOnMap() {
-        // Only this explicit action geocodes; editing or saving never moves the pin.
-        if (!form.address.trim()) {
-            error.value = 'Enter an address first.';
-
-            return;
-        }
-
+    async function loadSuggestions() {
         const request = geocodeRequest.start();
-        locating.value = true;
-        error.value = '';
-        const names = [
-            barangays.value.find((x) => x.code === form.barangay_code)?.name,
-            cities.value.find((x) => x.code === form.city_code)?.name,
-            'Philippines',
-        ];
-
-        const query = new URLSearchParams({
-            q: [form.address, ...names].filter(Boolean).join(', '),
-            format: 'json',
-            countrycodes: 'ph',
-            limit: '1',
-        });
+        const city = cities.value.find(
+            (item) => item.code === form.city_code,
+        )?.name;
+        const query = [form.address.trim(), city].filter(Boolean).join(', ');
 
         try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?${query}`,
-                { signal: request.signal },
-            );
-
-            if (!response.ok) {
-                throw new Error('Lookup failed');
-            }
-
-            const data = (await response.json()) as {
-                lat: string;
-                lon: string;
-            }[];
+            const matches =
+                suggestionCache.get(query) ??
+                (await searchAddresses(query, request.signal));
 
             if (!request.isCurrent()) {
                 return;
             }
 
-            if (!data.length) {
-                error.value =
-                    'No matching address. Place the pin on the map instead.';
-
-                return;
-            }
-
-            form.lat = Number(data[0].lat);
-            form.lng = Number(data[0].lon);
+            suggestionCache.set(query, matches);
+            suggestions.value = matches;
+            searched.value = true;
         } catch {
             if (request.isCurrent()) {
-                error.value =
-                    'Address lookup is unavailable. You can place the pin manually.';
+                suggestionError.value =
+                    'Address suggestions are unavailable. You can type the address and place the pin manually.';
             }
         } finally {
             if (request.isCurrent()) {
@@ -239,12 +232,176 @@ export function useListingAddress(form: AddressFields) {
         }
     }
 
-    function cancelLookup() {
-        geocodeRequest.cancel();
-        locating.value = false;
+    function requestSuggestions() {
+        cancelLookup();
+        suggestionError.value = '';
+        searched.value = false;
+
+        if (
+            form.address.trim().length < 3 ||
+            form.address === selectedAddress
+        ) {
+            return;
+        }
+
+        locating.value = true;
+        suggestionTimer = setTimeout(() => void loadSuggestions(), 350);
     }
 
-    // A manual pin move also calls this, preventing a pending lookup from overriding it.
+    function cancelLookup() {
+        clearTimeout(suggestionTimer);
+        geocodeRequest.cancel();
+        locating.value = false;
+        suggestions.value = [];
+        searched.value = false;
+        suggestionError.value = '';
+    }
+
+    async function selectSuggestion(suggestion: AddressSuggestion) {
+        cancelLookup();
+        regionRequest.cancel();
+        cityRequest.cancel();
+        const request = selectionRequest.start();
+        matchingLocation.value = true;
+        selectedAddress = suggestion.label;
+        form.address = suggestion.label;
+        form.lat = suggestion.lat;
+        form.lng = suggestion.lng;
+        error.value = '';
+
+        try {
+            await init();
+
+            if (!request.isCurrent()) {
+                return;
+            }
+
+            await applyAddressCodes('', '', '', '');
+
+            if (!suggestion.city) {
+                throw new Error('City missing from suggestion');
+            }
+
+            const cityMatches = matchingPlaces(
+                await fetchList(
+                    'cities',
+                    {
+                        name: normalizePlaceName(suggestion.city).replace(
+                            / city$/,
+                            '',
+                        ),
+                    },
+                    request.signal,
+                ),
+                suggestion.city,
+            );
+            let city = cityMatches.length === 1 ? cityMatches[0] : undefined;
+
+            if (!city && suggestion.province) {
+                const provinceMatches = matchingPlaces(
+                    await fetchList(
+                        'provinces',
+                        {
+                            name: suggestion.province,
+                        },
+                        request.signal,
+                    ),
+                    suggestion.province,
+                );
+                const candidates = cityMatches.filter((item) =>
+                    provinceMatches.some(
+                        (province) => province.code === item.province_code,
+                    ),
+                );
+                city = candidates.length === 1 ? candidates[0] : undefined;
+            }
+
+            if (!city?.region_code) {
+                throw new Error('No unique PSGC city match');
+            }
+
+            const [regionProvinces, regionCities, cityBarangays] =
+                await Promise.all([
+                    fetchList(
+                        'provinces',
+                        { region_code: city.region_code },
+                        request.signal,
+                    ),
+                    fetchList(
+                        'cities',
+                        { region_code: city.region_code },
+                        request.signal,
+                    ),
+                    fetchList(
+                        'barangays',
+                        { city_code: city.code },
+                        request.signal,
+                    ),
+                ]);
+
+            if (!request.isCurrent()) {
+                return;
+            }
+
+            provinces.value = regionProvinces;
+            cities.value = regionCities;
+            barangays.value = cityBarangays;
+            const barangayMatches = suggestion.barangay
+                ? matchingPlaces(cityBarangays, suggestion.barangay)
+                : [];
+            const barangay =
+                barangayMatches.length === 1 ? barangayMatches[0] : undefined;
+            await applyAddressCodes(
+                city.region_code,
+                city.province_code ?? '',
+                city.code,
+                barangay?.code ?? '',
+            );
+
+            if (request.isCurrent() && !barangay) {
+                error.value =
+                    'Region and city filled. Please choose the barangay; the address result did not identify a unique match.';
+            }
+        } catch {
+            if (request.isCurrent()) {
+                error.value =
+                    'Please choose the region, city, and barangay manually. This address could not be matched to PSGC.';
+            }
+        } finally {
+            if (request.isCurrent()) {
+                matchingLocation.value = false;
+            }
+        }
+    }
+
+    async function applyAddressCodes(
+        region: string,
+        province: string,
+        city: string,
+        barangay: string,
+    ) {
+        // Apply the hierarchy together so parent watchers do not clear matched children.
+        autofilling = true;
+        form.region_code = region;
+        form.province_code = province;
+        form.city_code = city;
+        form.barangay_code = barangay;
+        await nextTick();
+        autofilling = false;
+    }
+
+    // Suggestions never change coordinates until the owner selects a result.
+    watch(
+        () => form.address,
+        (value) => {
+            if (value !== selectedAddress) {
+                selectionRequest.cancel();
+                matchingLocation.value = false;
+            }
+        },
+        { flush: 'sync' },
+    );
+
     watch(
         () => [
             form.address,
@@ -253,7 +410,7 @@ export function useListingAddress(form: AddressFields) {
             form.city_code,
             form.barangay_code,
         ],
-        cancelLookup,
+        requestSuggestions,
     );
 
     onUnmounted(() => {
@@ -261,7 +418,9 @@ export function useListingAddress(form: AddressFields) {
         regionRequest.cancel();
         cityRequest.cancel();
         geocodeRequest.cancel();
+        clearTimeout(suggestionTimer);
         controllers.forEach((c) => c.abort());
+        selectionRequest.cancel();
     });
 
     return {
@@ -279,7 +438,12 @@ export function useListingAddress(form: AddressFields) {
         loading,
         error,
         locating,
-        findOnMap,
+        requestSuggestions,
         cancelLookup,
+        suggestions,
+        selectSuggestion,
+        suggestionError,
+        searched,
+        matchingLocation,
     };
 }

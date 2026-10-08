@@ -28,6 +28,7 @@ const emit = defineEmits<{
     move: [center: Coordinates];
     search: [];
     locate: [center: Coordinates];
+    userLocation: [center: Coordinates];
 }>();
 
 const container = ref<HTMLElement>();
@@ -110,6 +111,7 @@ function handleLocate(recenter = true) {
         (position, first) => {
             initializeMap(position, true);
             city.setUserLocation(position);
+            emit('userLocation', position);
 
             // Refine the marker without moving the camera or repeating the search.
             if (recenter && first) {
