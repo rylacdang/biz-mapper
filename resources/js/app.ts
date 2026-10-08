@@ -32,9 +32,25 @@ initializeTheme();
 // This will listen for flash toast data from the server...
 initializeFlashToast();
 
-// Register tile-caching service worker for offline map tiles
+// Retire only the previous raster-map worker; unrelated workers are untouched.
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/tile-cache-sw.js').catch(() => {
-        // Silent fail — map still works without SW, just no tile caching
-    });
+    void navigator.serviceWorker
+        .getRegistrations()
+        .then(async (registrations) => {
+            for (const registration of registrations) {
+                const worker =
+                    registration.active ??
+                    registration.waiting ??
+                    registration.installing;
+
+                if (
+                    worker &&
+                    new URL(worker.scriptURL).pathname === '/tile-cache-sw.js'
+                ) {
+                    await registration.unregister();
+                    await caches.delete('map-tiles-v1');
+                }
+            }
+        })
+        .catch(() => {});
 }

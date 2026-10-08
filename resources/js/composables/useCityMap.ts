@@ -1,0 +1,429 @@
+import type { FeatureCollection } from 'geojson';
+import type { GeoJSONSource, Map as CityMap } from 'maplibre-gl';
+import { onUnmounted, ref } from 'vue';
+import { MAP_STYLE } from '@/lib/explorer';
+import { maplibregl } from '@/lib/maplibre';
+import type {
+    Category,
+    Coordinates,
+    SearchBusiness,
+    SearchState,
+} from '@/types';
+
+export function useCityMap(
+    select: (id: number) => void,
+    move: (center: Coordinates) => void,
+) {
+    // Native resources are disposed together when the explorer leaves the page.
+    let map: CityMap | undefined;
+    let disposed = false;
+    let buildings = false;
+    let resize: ResizeObserver | undefined;
+
+    const ready = ref(false);
+    const error = ref('');
+    const is3d = ref(true);
+
+    let selectedId: number | null = null;
+    const reduced = () =>
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Generate category sprites locally so map pins need no external icon service.
+    function markerImage(category: Category) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 88;
+        canvas.height = 104;
+        const ctx = canvas.getContext('2d')!;
+        ctx.shadowColor = '#172b4d33';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(44, 42, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = category.color;
+        ctx.beginPath();
+        ctx.arc(44, 42, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(34, 70);
+        ctx.lineTo(44, 90);
+        ctx.lineTo(54, 70);
+        ctx.fill();
+        const glyphs: Record<string, string> = {
+            BuildingStorefrontIcon: '▦',
+            FireIcon: '♨',
+            CakeIcon: '♨',
+            ShoppingBagIcon: '▢',
+            HeartIcon: '♥',
+            AcademicCapIcon: '✎',
+            ScissorsIcon: '✂',
+            WrenchScrewdriverIcon: '⚒',
+            TruckIcon: '↗',
+            HomeIcon: '⌂',
+            SparklesIcon: '✦',
+            WifiIcon: '⌁',
+        };
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 29px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            glyphs[category.icon] ?? category.name.slice(0, 1),
+            44,
+            42,
+        );
+
+        return ctx.getImageData(0, 0, 88, 104);
+    }
+
+    function init(
+        container: HTMLElement,
+        center: Coordinates,
+        categories: Category[],
+        done: () => void,
+    ) {
+        try {
+            map = new maplibregl.Map({
+                container,
+                style: MAP_STYLE,
+                center: [center.lng, center.lat],
+                zoom: 15,
+                pitch: window.innerWidth < 768 ? 35 : 45,
+                bearing: -18,
+                maxPitch: 65,
+                attributionControl: { compact: true },
+            });
+            resize = new ResizeObserver(() => map?.resize());
+            resize.observe(container);
+            map.on('error', () => {
+                error.value =
+                    'Some map tiles couldn’t load. You can still browse places.';
+            });
+            map.on('moveend', () => {
+                const current = map?.getCenter();
+
+                if (current) {
+                    move({ lat: current.lat, lng: current.lng });
+                }
+            });
+            map.on('load', () => {
+                if (disposed || !map) {
+                    return;
+                }
+
+                error.value = '';
+
+                // Insert buildings below labels, interpolating height at neighborhood zoom.
+                const style = map.getStyle();
+                const source = Object.keys(style.sources).find(
+                    (key) => style.sources[key].type === 'vector',
+                );
+                const label = style.layers.find(
+                    (layer) => layer.type === 'symbol',
+                )?.id;
+
+                if (source) {
+                    map.addLayer(
+                        {
+                            id: 'city-buildings',
+                            type: 'fill-extrusion',
+                            source,
+                            'source-layer': 'building',
+                            minzoom: 14,
+                            filter: ['!=', ['get', 'hide_3d'], true],
+                            paint: {
+                                'fill-extrusion-color': '#d4deed',
+                                'fill-extrusion-height': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['zoom'],
+                                    14,
+                                    0,
+                                    15,
+                                    ['coalesce', ['get', 'render_height'], 6],
+                                ],
+                                'fill-extrusion-base': [
+                                    'coalesce',
+                                    ['get', 'render_min_height'],
+                                    0,
+                                ],
+                                'fill-extrusion-opacity': 0.92,
+                            },
+                        },
+                        label,
+                    );
+                    buildings = true;
+                }
+
+                // Clusters, pins, and the selection highlight share one business source.
+                categories.forEach((c) =>
+                    map!.addImage(`category-${c.id}`, markerImage(c), {
+                        pixelRatio: 2,
+                    }),
+                );
+                map.addSource('places', {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: [] },
+                    cluster: true,
+                    clusterMaxZoom: 14,
+                    clusterRadius: 45,
+                });
+                map.addLayer({
+                    id: 'clusters',
+                    type: 'circle',
+                    source: 'places',
+                    filter: ['has', 'point_count'],
+                    paint: {
+                        'circle-color': '#2563eb',
+                        'circle-radius': 23,
+                        'circle-stroke-color': '#fff',
+                        'circle-stroke-width': 4,
+                    },
+                });
+                map.addLayer({
+                    id: 'cluster-count',
+                    type: 'symbol',
+                    source: 'places',
+                    filter: ['has', 'point_count'],
+                    layout: {
+                        'text-field': ['get', 'point_count_abbreviated'],
+                        'text-size': 13,
+                    },
+                    paint: { 'text-color': '#fff' },
+                });
+                map.addLayer({
+                    id: 'selection',
+                    type: 'circle',
+                    source: 'places',
+                    filter: ['==', ['get', 'id'], -1],
+                    paint: {
+                        'circle-radius': 26,
+                        'circle-color': '#2563eb',
+                        'circle-opacity': 0.2,
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#2563eb',
+                    },
+                });
+                map.addLayer({
+                    id: 'pins',
+                    type: 'symbol',
+                    source: 'places',
+                    filter: ['!', ['has', 'point_count']],
+                    layout: {
+                        'icon-image': ['get', 'icon'],
+                        'icon-anchor': 'bottom',
+                        'icon-allow-overlap': true,
+                    },
+                });
+                // Both map pins and result buttons select by the same business ID.
+                map.on('click', 'pins', (e) => {
+                    const id = e.features?.[0]?.properties.id;
+
+                    if (id) {
+                        select(Number(id));
+                    }
+                });
+                map.on('click', 'clusters', async (e) => {
+                    const f = e.features?.[0];
+
+                    if (!f || f.geometry.type !== 'Point') {
+                        return;
+                    }
+
+                    const zoom = await (
+                        map!.getSource('places') as GeoJSONSource
+                    ).getClusterExpansionZoom(Number(f.properties.cluster_id));
+
+                    if (!disposed) {
+                        map?.easeTo({
+                            center: f.geometry.coordinates as [number, number],
+                            zoom,
+                            duration: reduced() ? 0 : 500,
+                        });
+                    }
+                });
+                ['pins', 'clusters'].forEach((layer) => {
+                    map!.on('mouseenter', layer, () => {
+                        map!.getCanvas().style.cursor = 'pointer';
+                    });
+                    map!.on('mouseleave', layer, () => {
+                        map!.getCanvas().style.cursor = '';
+                    });
+                });
+                ready.value = true;
+                done();
+            });
+        } catch {
+            error.value =
+                'Your browser can’t display the 3D map. Browse places in the list instead.';
+        }
+    }
+
+    function setPlaces(places: SearchBusiness[]) {
+        if (!ready.value || !map) {
+            return;
+        }
+
+        (map.getSource('places') as GeoJSONSource).setData({
+            type: 'FeatureCollection',
+            features: places.map((b) => ({
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [Number(b.lng), Number(b.lat)],
+                },
+                properties: { id: b.id, icon: `category-${b.category?.id}` },
+            })),
+        });
+        highlight(selectedId);
+    }
+
+    function moveCenter(center: Coordinates) {
+        map?.jumpTo({
+            center: [center.lng, center.lat],
+            padding: { left: 0, right: 0, top: 0, bottom: 0 },
+        });
+    }
+
+    function highlight(id: number | null) {
+        selectedId = id;
+
+        if (ready.value) {
+            map?.setFilter('selection', ['==', ['get', 'id'], id ?? -1]);
+        }
+    }
+
+    function focus(place: Coordinates, panelVisible = true) {
+        // Camera padding keeps the selected pin clear of the active panel and controls.
+        const mobile = window.innerWidth < 768;
+        map?.easeTo({
+            center: [place.lng, place.lat],
+            zoom: Math.max(map.getZoom(), 16),
+            padding: {
+                left: mobile || !panelVisible ? 24 : 380,
+                right: 70,
+                top: 88,
+                bottom: mobile && panelVisible ? window.innerHeight * 0.46 : 72,
+            },
+            duration: reduced() ? 0 : 650,
+        });
+    }
+
+    function setRadius(state: SearchState | null) {
+        if (!ready.value || !map) {
+            return;
+        }
+
+        // Use a geodesic ring so radius stays in kilometers across map latitudes.
+        const points: number[][] = [];
+
+        if (state) {
+            for (let i = 0; i <= 96; i++) {
+                const angle = (i / 96) * Math.PI * 2;
+                const d = state.radius / 6371;
+                const lat = (state.lat * Math.PI) / 180;
+                const lng = (state.lng * Math.PI) / 180;
+                const targetLat = Math.asin(
+                    Math.sin(lat) * Math.cos(d) +
+                        Math.cos(lat) * Math.sin(d) * Math.cos(angle),
+                );
+                const targetLng =
+                    lng +
+                    Math.atan2(
+                        Math.sin(angle) * Math.sin(d) * Math.cos(lat),
+                        Math.cos(d) - Math.sin(lat) * Math.sin(targetLat),
+                    );
+                points.push([
+                    (targetLng * 180) / Math.PI,
+                    (targetLat * 180) / Math.PI,
+                ]);
+            }
+        }
+
+        const data: FeatureCollection = {
+            type: 'FeatureCollection',
+            features: state
+                ? [
+                      {
+                          type: 'Feature',
+                          properties: {},
+                          geometry: { type: 'Polygon', coordinates: [points] },
+                      },
+                  ]
+                : [],
+        };
+
+        if (map.getSource('radius')) {
+            (map.getSource('radius') as GeoJSONSource).setData(data);
+        } else {
+            map.addSource('radius', { type: 'geojson', data });
+            map.addLayer(
+                {
+                    id: 'radius-fill',
+                    type: 'fill',
+                    source: 'radius',
+                    paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.04 },
+                },
+                'clusters',
+            );
+            map.addLayer(
+                {
+                    id: 'radius-line',
+                    type: 'line',
+                    source: 'radius',
+                    paint: {
+                        'line-color': '#2563eb',
+                        'line-width': 2,
+                        'line-dasharray': [3, 3],
+                        'line-opacity': 0.6,
+                    },
+                },
+                'clusters',
+            );
+        }
+    }
+
+    function toggle3d() {
+        is3d.value = !is3d.value;
+        map?.easeTo({
+            pitch: is3d.value ? (window.innerWidth < 768 ? 35 : 45) : 0,
+            duration: reduced() ? 0 : 500,
+        });
+
+        if (buildings) {
+            map?.setLayoutProperty(
+                'city-buildings',
+                'visibility',
+                is3d.value ? 'visible' : 'none',
+            );
+        }
+    }
+
+    onUnmounted(() => {
+        disposed = true;
+        resize?.disconnect();
+        map?.remove();
+    });
+
+    return {
+        init,
+        ready,
+        error,
+        is3d,
+        setPlaces,
+        moveCenter,
+        highlight,
+        focus,
+        setRadius,
+        toggle3d,
+        zoom: (delta: number) =>
+            map?.easeTo({
+                zoom: map.getZoom() + delta,
+                duration: reduced() ? 0 : 250,
+            }),
+        north: () => map?.easeTo({ bearing: 0, duration: reduced() ? 0 : 400 }),
+    };
+}

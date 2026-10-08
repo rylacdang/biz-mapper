@@ -1,0 +1,836 @@
+<script setup lang="ts">
+import { router, useForm } from '@inertiajs/vue3';
+import {
+    X,
+    ArrowLeft,
+    ArrowRight,
+    ImagePlus,
+    MapPin,
+    Trash2,
+} from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import LocationPicker from '@/components/explorer/LocationPicker.vue';
+import { useListingAddress } from '@/composables/useListingAddress';
+import {
+    DEFAULT_CENTER,
+    photoUrl,
+    listingCoordinates,
+    listingSubmission,
+} from '@/lib/explorer';
+import business from '@/routes/owner/business';
+import type { Business, Category, Coordinates, OpeningHours } from '@/types';
+
+const props = defineProps<{
+    listing: Business | null;
+    categories: Category[];
+}>();
+
+const emit = defineEmits<{ close: [] }>();
+
+// Drawer state and step navigation
+const dialog = ref<HTMLDialogElement>();
+
+const step = ref(0);
+const confirming = ref(false);
+const deleting = ref(false);
+const actionError = ref('');
+const steps = ['Business', 'Photos & contact', 'Hours', 'Location'];
+const days = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+];
+
+// Copy saved hours into the draft so edits never mutate the page payload.
+const hours: Record<string, OpeningHours> = Object.fromEntries(
+    days.map((day) => [
+        day,
+        { open: '09:00', close: '18:00', closed: day === 'sunday' },
+    ]),
+);
+
+const coordinates = props.listing
+    ? listingCoordinates(props.listing)
+    : DEFAULT_CENTER;
+
+const form = useForm({
+    category_id: String(props.listing?.category_id ?? ''),
+    name: props.listing?.name ?? '',
+    description: props.listing?.description ?? '',
+    address: props.listing?.address ?? '',
+    region_code: props.listing?.region_code ?? '',
+    province_code: props.listing?.province_code ?? '',
+    city_code: props.listing?.city_code ?? '',
+    barangay_code: props.listing?.barangay_code ?? '',
+    ...coordinates,
+    phone: props.listing?.phone ?? '',
+    website: props.listing?.website ?? '',
+    cover_photo: null as File | null,
+    logo: null as File | null,
+    hours: Object.fromEntries(
+        days.map((day) => [
+            day,
+            { ...(props.listing?.hours?.[day] ?? hours[day]) },
+        ]),
+    ),
+    _method: props.listing ? 'PUT' : 'POST',
+});
+
+const address = useListingAddress(form);
+
+const {
+    regions,
+    provinces,
+    cities,
+    barangays,
+    error: addressError,
+    locating,
+} = address;
+
+const preview = ref(photoUrl(props.listing?.cover_photo));
+const urls: string[] = [];
+const saved = computed(() => Boolean(props.listing));
+
+onMounted(() => {
+    dialog.value?.showModal();
+    void address.init();
+});
+
+// Object URLs live only as long as this drawer instance.
+onUnmounted(() => urls.forEach((url) => URL.revokeObjectURL(url)));
+
+function handleUpload(event: Event, field: 'cover_photo' | 'logo') {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    form[field] = file;
+
+    if (field === 'cover_photo' && file) {
+        const url = URL.createObjectURL(file);
+        urls.push(url);
+        preview.value = url;
+    }
+}
+
+function handlePlacePin(coords: Coordinates) {
+    // A manual choice wins even if an earlier address lookup is still pending.
+    address.cancelLookup();
+    form.lat = coords.lat;
+    form.lng = coords.lng;
+}
+
+function handleNextStep() {
+    form.clearErrors();
+
+    if (step.value === 0) {
+        if (!form.name.trim()) {
+            form.setError('name', 'Give your business a name.');
+        }
+
+        if (!form.category_id) {
+            form.setError('category_id', 'Choose a category.');
+        }
+
+        if (form.description.trim().length < 10) {
+            form.setError(
+                'description',
+                'Write at least 10 characters about your business.',
+            );
+        }
+    }
+
+    if (step.value === 1 && !saved.value && !form.cover_photo) {
+        form.setError('cover_photo', 'Choose a cover photo.');
+    }
+
+    if (!Object.keys(form.errors).length) {
+        step.value++;
+    }
+}
+
+function validationStep(field: string): number {
+    if (['name', 'category_id', 'description'].includes(field)) {
+        return 0;
+    }
+
+    if (['cover_photo', 'logo', 'phone', 'website'].includes(field)) {
+        return 1;
+    }
+
+    return field.startsWith('hours') ? 2 : 3;
+}
+
+function handleSubmit() {
+    form.transform(listingSubmission);
+    // Saving is deliberately independent of address lookup; the chosen pin is authoritative.
+    form.post(
+        saved.value
+            ? business.update(props.listing!.id).url
+            : business.store().url,
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => emit('close'),
+            onError: (errors) => {
+                step.value = validationStep(Object.keys(errors)[0]);
+            },
+        },
+    );
+}
+
+function handleDelete() {
+    if (!props.listing) {
+        return;
+    }
+
+    deleting.value = true;
+    actionError.value = '';
+    router.delete(business.destroy(props.listing.id).url, {
+        preserveScroll: true,
+        onSuccess: () => emit('close'),
+        onError: () => {
+            actionError.value = 'The listing couldn’t be deleted. Try again.';
+        },
+        onFinish: () => {
+            deleting.value = false;
+        },
+    });
+}
+</script>
+
+<template>
+    <!-- Native dialog traps focus until the form closes -->
+    <dialog
+        ref="dialog"
+        :class="[
+            'fixed [inset:0_0_0_auto] m-0 h-[100dvh] max-h-[100dvh] w-140 max-w-full',
+            'rounded-[24px_0_0_24px] border-0 bg-white p-0 text-explorer-ink',
+            'shadow-[-10px_0_60px_#172b4d20] backdrop:bg-[#172b4d55] backdrop:backdrop-blur-[3px]',
+            'max-md:w-full max-md:rounded-[0]',
+        ]"
+        aria-labelledby="listing-title"
+        @cancel.prevent="!form.processing && !deleting && emit('close')"
+    >
+        <form
+            class="flex h-full flex-col"
+            @submit.prevent="step === 3 ? handleSubmit() : handleNextStep()"
+        >
+            <!-- Drawer heading and close action -->
+            <header
+                class="flex items-center justify-between border-b border-[#edf1f6] px-[30px] pt-[27px] pb-6 max-md:px-5 max-md:py-[22px]"
+            >
+                <div>
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                    >
+                        YOUR BUSINESS, DISCOVERED
+                    </span>
+
+                    <h2
+                        class="mx-0 mt-2 mb-0 text-[22px] tracking-[-0.8px] max-md:text-[20px]"
+                        id="listing-title"
+                    >
+                        {{
+                            saved ? 'Edit your listing' : 'Hello, neighborhood.'
+                        }}
+                    </h2>
+                </div>
+
+                <button
+                    type="button"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5]"
+                    :disabled="form.processing || deleting"
+                    aria-label="Close listing form"
+                    @click="emit('close')"
+                >
+                    <X :size="22" />
+                </button>
+            </header>
+
+            <!-- Four-step progress navigation -->
+            <nav
+                class="flex gap-[10px] border-b border-[#edf1f6] px-[25px] py-5 max-md:gap-[6px] max-md:px-3 max-md:py-4"
+                aria-label="Listing steps"
+            >
+                <button
+                    :class="[
+                        'group/step flex flex-1 items-center gap-[5px] border-0 bg-transparent p-0 text-[10px]',
+                        'whitespace-nowrap text-[#a1aec0] data-[active=true]:font-[700]',
+                        'data-[active=true]:text-explorer-blue max-md:gap-[3px] max-md:text-[9px]',
+                    ]"
+                    v-for="(label, index) in steps"
+                    :key="label"
+                    type="button"
+                    :data-active="step === index"
+                    :data-complete="step > index"
+                    :aria-current="step === index ? 'step' : undefined"
+                    @click="index < step && (step = index)"
+                >
+                    <span
+                        :class="[
+                            'grid h-6 w-6 shrink-0 place-items-center rounded-[50%] bg-[#eff3f9] text-[10px]',
+                            'group-data-[active=true]/step:bg-explorer-blue group-data-[active=true]/step:text-white',
+                            'group-data-[complete=true]/step:bg-[#e9f7f1]',
+                            'group-data-[complete=true]/step:text-explorer-green max-md:h-[21px] max-md:w-[21px]',
+                        ]"
+                    >
+                        {{ index + 1 }}
+                    </span>
+                    {{ label }}
+                </button>
+            </nav>
+
+            <div
+                class="min-h-0 flex-1 overflow-auto p-[30px] max-md:px-5 max-md:py-[22px]"
+            >
+                <!-- Step 1: Business information -->
+                <div v-if="step === 0">
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                    >
+                        01 / THE INTRODUCTION
+                    </span>
+
+                    <h3 class="mx-0 my-[9px] text-[21px] tracking-[-0.6px]">
+                        Tell us about your business
+                    </h3>
+
+                    <p
+                        class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
+                    >
+                        A little personality goes a long way.
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Business name
+                        <input
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                            v-model="form.name"
+                            required
+                            maxlength="255"
+                            placeholder="Your neighborhood favorite"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.name }}
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Category
+                        <select
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                            v-model="form.category_id"
+                            required
+                        >
+                            <option value="">Choose a category</option>
+
+                            <option
+                                v-for="category in categories"
+                                :key="category.id"
+                                :value="String(category.id)"
+                            >
+                                {{ category.name }}
+                            </option>
+                        </select>
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.category_id }}
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Description
+                        <textarea
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                            v-model="form.description"
+                            required
+                            minlength="10"
+                            rows="5"
+                            placeholder="What makes your place special?"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.description }}
+                    </p>
+                </div>
+
+                <!-- Step 2: Photos and contact information -->
+                <div v-else-if="step === 1">
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                    >
+                        02 / FIRST IMPRESSIONS
+                    </span>
+
+                    <h3 class="mx-0 my-[9px] text-[21px] tracking-[-0.6px]">
+                        Make a great first impression
+                    </h3>
+
+                    <p
+                        class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
+                    >
+                        Let people see what they can look forward to.
+                    </p>
+
+                    <label
+                        :class="[
+                            'relative mt-[17px] flex h-[185px] flex-col items-center justify-center gap-2',
+                            'overflow-hidden rounded-[13px] border border-dashed border-[#b8cbe6] bg-[#f2f6fc]',
+                            'text-[11px] font-[700] text-[#6387bb]',
+                        ]"
+                    >
+                        <img
+                            class="absolute h-full w-full object-cover"
+                            v-if="preview"
+                            :src="preview"
+                            alt="Cover photo preview"
+                        />
+
+                        <span
+                            class="z-1 flex flex-col items-center gap-2 rounded-[10px] bg-[#ffffffde] p-[14px]"
+                        >
+                            <ImagePlus :size="26" />
+                            {{
+                                preview
+                                    ? 'Change cover photo'
+                                    : 'Choose a cover photo'
+                            }}
+                            <small
+                                class="text-[10px] font-[400] text-[#90a0b6]"
+                            >
+                                JPG, PNG or WebP · up to 5 MB
+                            </small>
+                        </span>
+
+                        <input
+                            class="absolute inset-0 z-2 h-full w-full cursor-pointer opacity-0"
+                            type="file"
+                            accept="image/*"
+                            aria-label="Cover photo"
+                            @change="handleUpload($event, 'cover_photo')"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.cover_photo }}
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Logo
+                        <small class="text-[10px] font-[400] text-[#90a0b6]">
+                            optional · up to 2 MB
+                        </small>
+
+                        <input
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                            type="file"
+                            accept="image/*"
+                            @change="handleUpload($event, 'logo')"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.logo }}
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Phone number
+                        <input
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                            v-model="form.phone"
+                            type="tel"
+                            placeholder="09XX XXX XXXX"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.phone }}
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Website
+                        <input
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                            v-model="form.website"
+                            type="url"
+                            placeholder="https://yourbusiness.com"
+                        />
+                    </label>
+
+                    <p
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ form.errors.website }}
+                    </p>
+                </div>
+
+                <!-- Step 3: Operating hours -->
+                <div v-else-if="step === 2">
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                    >
+                        03 / COME ON OVER
+                    </span>
+
+                    <h3 class="mx-0 my-[9px] text-[21px] tracking-[-0.6px]">
+                        When can people visit?
+                    </h3>
+
+                    <p
+                        class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
+                    >
+                        Set your usual hours for each day.
+                    </p>
+
+                    <div
+                        v-for="day in days"
+                        :key="day"
+                        class="flex min-h-[65px] items-center justify-between gap-3 border-b border-[#edf1f6] px-0 py-[14px]"
+                    >
+                        <label
+                            class="flex items-center gap-[6px] text-[11px] capitalize max-md:text-[10px]"
+                        >
+                            <input
+                                v-model="form.hours[day].closed"
+                                type="checkbox"
+                                :aria-label="`${day} closed`"
+                            />
+                            {{ day }}
+                            <small
+                                class="text-[10px] font-[400] text-[#90a0b6]"
+                                v-if="form.hours[day].closed"
+                            >
+                                Closed
+                            </small>
+                        </label>
+
+                        <div
+                            class="flex items-center gap-[5px]"
+                            v-if="!form.hours[day].closed"
+                        >
+                            <input
+                                class="w-[105px] min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink max-md:w-[90px]"
+                                v-model="form.hours[day].open"
+                                type="time"
+                                :aria-label="`${day} opening time`"
+                            />
+
+                            <span>–</span>
+
+                            <input
+                                class="w-[105px] min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-2 text-[11px] font-normal text-explorer-ink max-md:w-[90px]"
+                                v-model="form.hours[day].close"
+                                type="time"
+                                :aria-label="`${day} closing time`"
+                            />
+                        </div>
+                    </div>
+
+                    <p
+                        v-for="(message, key) in form.errors"
+                        :key="key"
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ message }}
+                    </p>
+                </div>
+
+                <!-- Step 4: Address and manually chosen location -->
+                <div v-else>
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                    >
+                        04 / RIGHT HERE
+                    </span>
+
+                    <h3 class="mx-0 my-[9px] text-[21px] tracking-[-0.6px]">
+                        Put yourself on the map
+                    </h3>
+
+                    <p
+                        class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
+                    >
+                        Choose your address, then place the pin exactly where
+                        visitors should go.
+                    </p>
+
+                    <label
+                        class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                    >
+                        Street address
+                        <input
+                            class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                            v-model="form.address"
+                            required
+                            maxlength="500"
+                            placeholder="Street, building, or unit"
+                        />
+                    </label>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                        >
+                            Region
+                            <select
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                v-model="form.region_code"
+                            >
+                                <option value="">Choose region</option>
+
+                                <option
+                                    v-for="item in regions"
+                                    :key="item.code"
+                                    :value="item.code"
+                                >
+                                    {{ item.name }}
+                                </option>
+                            </select>
+                        </label>
+
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                            v-if="provinces.length"
+                        >
+                            Province
+                            <select
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                v-model="form.province_code"
+                            >
+                                <option value="">All / independent city</option>
+
+                                <option
+                                    v-for="item in provinces"
+                                    :key="item.code"
+                                    :value="item.code"
+                                >
+                                    {{ item.name }}
+                                </option>
+                            </select>
+                        </label>
+
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                        >
+                            City / municipality
+                            <select
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                v-model="form.city_code"
+                            >
+                                <option value="">Choose city</option>
+
+                                <option
+                                    v-for="item in cities"
+                                    :key="item.code"
+                                    :value="item.code"
+                                >
+                                    {{ item.name }}
+                                </option>
+                            </select>
+                        </label>
+
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                        >
+                            Barangay
+                            <select
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                v-model="form.barangay_code"
+                            >
+                                <option value="">Choose barangay</option>
+
+                                <option
+                                    v-for="item in barangays"
+                                    :key="item.code"
+                                    :value="item.code"
+                                >
+                                    {{ item.name }}
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="mx-0 my-[18px] inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] py-3 text-[12px] font-[700] text-[#56708e]"
+                        :disabled="locating"
+                        @click="address.findOnMap"
+                    >
+                        <MapPin :size="16" />
+                        {{ locating ? 'Finding address…' : 'Find on map' }}
+                    </button>
+
+                    <p
+                        v-if="addressError"
+                        class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
+                        role="status"
+                    >
+                        {{ addressError }}
+                    </p>
+
+                    <LocationPicker
+                        :lat="Number(form.lat)"
+                        :lng="Number(form.lng)"
+                        @change="handlePlacePin"
+                    />
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                        >
+                            Latitude
+                            <input
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                                v-model.number="form.lat"
+                                type="number"
+                                min="-90"
+                                max="90"
+                                step="any"
+                                required
+                                @input="address.cancelLookup"
+                            />
+                        </label>
+
+                        <label
+                            class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"
+                        >
+                            Longitude
+                            <input
+                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
+                                v-model.number="form.lng"
+                                type="number"
+                                min="-180"
+                                max="180"
+                                step="any"
+                                required
+                                @input="address.cancelLookup"
+                            />
+                        </label>
+                    </div>
+
+                    <p
+                        v-for="(message, key) in form.errors"
+                        :key="key"
+                        class="mx-0 mt-[5px] mb-0 text-[11px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ message }}
+                    </p>
+                </div>
+
+                <!-- Delete confirmation -->
+                <section
+                    v-if="confirming"
+                    class="mt-[25px] rounded-[12px] bg-[#fff2f3] p-[18px]"
+                    role="alert"
+                >
+                    <h3 class="m-0 text-[14px]">Delete this listing?</h3>
+
+                    <p class="text-[12px]">
+                        You can restore it from Trash later.
+                    </p>
+
+                    <p
+                        v-if="actionError"
+                        class="mx-0 mt-[5px] mb-0 text-[12px] text-[#d14a5b] empty:hidden"
+                    >
+                        {{ actionError }}
+                    </p>
+
+                    <button
+                        type="button"
+                        class="mt-[10px] mr-2 inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#dc3545] px-[17px] py-3 text-[12px] font-[700] text-white"
+                        :disabled="deleting"
+                        @click="handleDelete"
+                    >
+                        {{ deleting ? 'Deleting…' : 'Delete listing' }}
+                    </button>
+
+                    <button
+                        type="button"
+                        class="mt-[10px] mr-2 inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] py-3 text-[12px] font-[700] text-[#56708e]"
+                        :disabled="deleting"
+                        @click="confirming = false"
+                    >
+                        Keep listing
+                    </button>
+                </section>
+            </div>
+
+            <!-- Step navigation and save action -->
+            <footer
+                :class="[
+                    'flex items-center justify-between gap-[15px] border-t border-[#edf1f6] px-[30px] py-5',
+                    'max-md:px-5 max-md:py-4 max-md:pb-[max(16px,_env(safe-area-inset-bottom))]',
+                ]"
+            >
+                <button
+                    v-if="step > 0"
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] py-3 text-[12px] font-[700] text-[#56708e]"
+                    @click="step--"
+                >
+                    <ArrowLeft :size="16" />
+                    Back
+                </button>
+
+                <button
+                    v-else-if="saved"
+                    type="button"
+                    class="flex items-center gap-[6px] border-0 bg-transparent text-[11px] text-[#d14a5b]"
+                    @click="confirming = !confirming"
+                >
+                    <Trash2 :size="16" />
+                    Delete listing
+                </button>
+
+                <span v-else class="text-[11px] text-[#8a9bb1]">
+                    Step {{ step + 1 }} of 4
+                </span>
+
+                <button
+                    class="inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-explorer-blue px-[17px] py-3 text-[12px] font-[700] text-white"
+                    :disabled="form.processing || deleting || locating"
+                >
+                    {{
+                        form.processing
+                            ? 'Saving…'
+                            : step === 3
+                              ? saved
+                                  ? 'Save changes'
+                                  : 'Create listing'
+                              : 'Continue'
+                    }}
+                    <ArrowRight :size="16" />
+                </button>
+            </footer>
+        </form>
+    </dialog>
+</template>

@@ -8,6 +8,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --font-explorer-body: 'DM Sans', sans-serif;
+    --font-explorer-heading: 'Sora', sans-serif;
+    --color-explorer-ink: #172b4d;
+    --color-explorer-blue: #2563eb;
+    --color-explorer-cloud: #f5f8fc;
+    --color-explorer-green: #22a67a;
+    --color-explorer-line: #e8edf4;
+
     --font-sans:
         Instrument Sans, ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
