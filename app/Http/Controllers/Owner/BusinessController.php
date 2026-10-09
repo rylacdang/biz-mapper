@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Owner;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\StoreBusinessRequest;
 use App\Http\Requests\Business\UpdateBusinessRequest;
 use App\Models\Business;
@@ -28,7 +29,7 @@ class BusinessController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing created successfully.')]);
 
-        return redirect()->route('owner.dashboard');
+        return redirect()->route('explorer.index');
     }
 
     /**
@@ -40,7 +41,7 @@ class BusinessController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing updated successfully.')]);
 
-        return redirect()->route('owner.dashboard');
+        return redirect()->route('explorer.index');
     }
 
     /**
@@ -54,7 +55,7 @@ class BusinessController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing removed successfully.')]);
 
-        return redirect()->route('owner.dashboard');
+        return redirect()->route('explorer.index');
     }
 
     /**
@@ -70,6 +71,6 @@ class BusinessController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing restored successfully.')]);
 
-        return redirect()->route('owner.dashboard');
+        return redirect()->route('explorer.index');
     }
 }

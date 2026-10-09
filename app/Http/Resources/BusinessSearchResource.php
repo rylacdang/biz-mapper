@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class BusinessSearchResource extends JsonResource
+{
+    /**
+     * Preserve the public nearby-search response.
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'description' => $this->description,
+            'address' => $this->address,
+            'phone' => $this->phone,
+            'website' => $this->website,
+            'cover_photo' => $this->cover_photo,
+            'logo' => $this->logo,
+            'lat' => $this->lat,
+            'lng' => $this->lng,
+            'distance' => round((float) $this->distance, 2),
+            'category' => $this->category ? [
+                'id' => $this->category->id,
+                'name' => $this->category->name,
+                'color' => $this->category->color,
+                'icon' => $this->category->icon,
+            ] : null,
+        ];
+    }
+}

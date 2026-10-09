@@ -1,18 +1,21 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Business;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\ShowBusinessRequest;
 use App\Http\Resources\BusinessProfileResource;
+use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Services\BusinessService;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class BusinessProfileController extends Controller
+class ShowController extends Controller
 {
     public function __construct(
-        private readonly BusinessService $businessService
+        private readonly BusinessService $businessService,
+        private readonly BusinessRepositoryInterface $businessRepo
     ) {}
 
     /**
@@ -20,7 +23,7 @@ class BusinessProfileController extends Controller
      */
     public function __invoke(ShowBusinessRequest $request): Response
     {
-        $business = $this->businessService->getBusinessProfile($request->validated('slug'));
+        $business = $this->businessRepo->findBySlugWithCategoryOrFail($request->validated('slug'));
 
         Gate::authorize('view', $business);
 

@@ -10,20 +10,9 @@ use Illuminate\Support\Str;
 
 class BusinessService
 {
-    /**
-     * Use the business repository for listing workflows.
-     */
     public function __construct(
         private readonly BusinessRepositoryInterface $businessRepo
     ) {}
-
-    /**
-     * Get a business for its public profile.
-     */
-    public function getBusinessProfile(string $slug): Business
-    {
-        return $this->businessRepo->findBySlugWithCategoryOrFail($slug);
-    }
 
     /**
      * Build share metadata from the business's actual content.
