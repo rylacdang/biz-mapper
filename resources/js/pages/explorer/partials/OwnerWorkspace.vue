@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus, Pencil, Trash2, RotateCcw, Store } from 'lucide-vue-next';
-import { photoUrl } from '@/lib/explorer';
 import type { Business } from '@/types';
+import { photoUrl } from '@/utils/businesses';
 
 defineProps<{
     places: Business[];

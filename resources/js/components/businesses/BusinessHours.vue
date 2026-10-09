@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Clock } from 'lucide-vue-next';
 import { computed } from 'vue';
-import { formatBusinessTime } from '@/lib/businessHours';
 import type { SearchBusiness } from '@/types';
+import { formatBusinessTime } from '@/utils/businessHours';
 
 const props = withDefaults(
     defineProps<{ place: SearchBusiness; compact?: boolean }>(),

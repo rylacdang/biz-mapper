@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ArrowLeft } from 'lucide-vue-next';
-import BusinessActions from '@/components/explorer/BusinessActions.vue';
-import BusinessContact from '@/components/explorer/BusinessContact.vue';
-import BusinessHours from '@/components/explorer/BusinessHours.vue';
-import BusinessIdentity from '@/components/explorer/BusinessIdentity.vue';
+import BusinessActions from '@/components/businesses/BusinessActions.vue';
+import BusinessContact from '@/components/businesses/BusinessContact.vue';
+import BusinessHours from '@/components/businesses/BusinessHours.vue';
+import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import type { SearchBusiness } from '@/types';
 
 defineProps<{ place: SearchBusiness }>();

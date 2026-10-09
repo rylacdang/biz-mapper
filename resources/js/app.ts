@@ -1,9 +1,10 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
+import { toast } from 'vue-sonner';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { initializeFlashToast } from '@/lib/flashToast';
+import type { FlashToast } from '@/types/ui';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -11,7 +12,7 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            case name === 'Welcome' || name === 'businesses/Show':
+            case name === 'explorer/Index' || name === 'businesses/Show':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
@@ -30,7 +31,15 @@ createInertiaApp({
 initializeTheme();
 
 // This will listen for flash toast data from the server...
-initializeFlashToast();
+router.on('flash', (event) => {
+    const data = (event as CustomEvent).detail?.flash?.toast as
+        | FlashToast
+        | undefined;
+
+    if (data) {
+        toast[data.type](data.message);
+    }
+});
 
 // Retire only the previous raster-map worker; unrelated workers are untouched.
 if ('serviceWorker' in navigator) {

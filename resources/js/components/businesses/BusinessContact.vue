@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Globe, MapPin, Phone } from 'lucide-vue-next';
-import { websiteUrl } from '@/lib/explorer';
 import type { SearchBusiness } from '@/types';
+import { websiteUrl } from '@/utils/businesses';
 
 withDefaults(defineProps<{ place: SearchBusiness; compact?: boolean }>(), {
     compact: false,

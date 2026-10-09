@@ -2,12 +2,13 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowUpRight, MapPin } from 'lucide-vue-next';
 import { computed } from 'vue';
-import BusinessActions from '@/components/explorer/BusinessActions.vue';
-import BusinessContact from '@/components/explorer/BusinessContact.vue';
-import BusinessHours from '@/components/explorer/BusinessHours.vue';
-import BusinessIdentity from '@/components/explorer/BusinessIdentity.vue';
-import { DEFAULT_SEARCH_RADIUS, searchParams } from '@/lib/explorer';
+import BusinessActions from '@/components/businesses/BusinessActions.vue';
+import BusinessContact from '@/components/businesses/BusinessContact.vue';
+import BusinessHours from '@/components/businesses/BusinessHours.vue';
+import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
+import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import type { SearchBusiness } from '@/types';
+import { searchParams } from '@/utils/search';
 
 const props = defineProps<{
     business: SearchBusiness;

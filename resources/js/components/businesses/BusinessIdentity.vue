@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Store } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
-import { photoUrl } from '@/lib/explorer';
 import type { SearchBusiness } from '@/types';
+import { photoUrl } from '@/utils/businesses';
 
 const props = withDefaults(
     defineProps<{ place: SearchBusiness; fullPage?: boolean }>(),

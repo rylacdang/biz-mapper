@@ -2,18 +2,13 @@
 import { router, useForm } from '@inertiajs/vue3';
 import { X, ArrowLeft, ArrowRight, ImagePlus, Trash2 } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import LocationPicker from '@/components/explorer/LocationPicker.vue';
-import RequiredMark from '@/components/explorer/RequiredMark.vue';
-import StreetAddressInput from '@/components/explorer/StreetAddressInput.vue';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { useListingAddress } from '@/composables/useListingAddress';
-import {
-    DEFAULT_CENTER,
-    photoUrl,
-    listingCoordinates,
-    listingSubmission,
-} from '@/lib/explorer';
-import business from '@/routes/owner/business';
+import { DEFAULT_CENTER } from '@/constants/map';
+import LocationPicker from '@/pages/explorer/partials/listings/LocationPicker.vue';
+import RequiredMark from '@/pages/explorer/partials/listings/RequiredMark.vue';
+import StreetAddressInput from '@/pages/explorer/partials/listings/StreetAddressInput.vue';
+import business from '@/routes/owner/businesses';
 import type {
     AddressSuggestion,
     Business,
@@ -21,6 +16,7 @@ import type {
     Coordinates,
     OpeningHours,
 } from '@/types';
+import { photoUrl } from '@/utils/businesses';
 
 const props = defineProps<{
     listing: Business | null;
@@ -57,7 +53,7 @@ const hours: Record<string, OpeningHours> = Object.fromEntries(
 );
 
 const coordinates = props.listing
-    ? listingCoordinates(props.listing)
+    ? { lat: Number(props.listing.lat), lng: Number(props.listing.lng) }
     : (props.initialLocation ?? DEFAULT_CENTER);
 
 const form = useForm({
@@ -240,7 +236,11 @@ function validationStep(field: string): number {
 }
 
 function handleSubmit() {
-    form.transform(listingSubmission);
+    form.transform((draft) => ({
+        ...draft,
+        lat: Number(draft.lat),
+        lng: Number(draft.lng),
+    }));
     // Saving is deliberately independent of address lookup; the chosen pin is authoritative.
     form.post(
         saved.value

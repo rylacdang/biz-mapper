@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Map, Marker } from 'maplibre-gl';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { MAP_STYLE } from '@/lib/explorer';
-import { maplibregl } from '@/lib/maplibre';
+import { MAP_STYLE } from '@/constants/map';
+import { maplibregl } from '@/maps/maplibre';
 import type { Coordinates } from '@/types';
 
 const props = defineProps<{ lat: number; lng: number }>();

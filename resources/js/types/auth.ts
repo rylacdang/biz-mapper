@@ -1,5 +1,6 @@
 export type User = {
     id: number;
+    role: 'owner' | 'consumer';
     name: string;
     email: string;
     avatar?: string;
@@ -10,7 +11,7 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    user: User | null;
 };
 
 export type TwoFactorConfigContent = {

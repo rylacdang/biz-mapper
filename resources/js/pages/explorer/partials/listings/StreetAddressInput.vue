@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { MapPin } from 'lucide-vue-next';
 import { computed, nextTick, ref, useId, watch } from 'vue';
-import RequiredMark from '@/components/explorer/RequiredMark.vue';
+import RequiredMark from '@/pages/explorer/partials/listings/RequiredMark.vue';
 import type { AddressSuggestion } from '@/types';
 
 const model = defineModel<string>({ required: true });

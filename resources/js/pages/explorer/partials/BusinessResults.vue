@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ArrowUpRight, MapPin, Store } from 'lucide-vue-next';
-import { formatDistance, photoUrl } from '@/lib/explorer';
 import type { SearchBusiness } from '@/types';
+import { photoUrl } from '@/utils/businesses';
+import { formatDistance } from '@/utils/geography';
 
 defineProps<{
     places: SearchBusiness[];

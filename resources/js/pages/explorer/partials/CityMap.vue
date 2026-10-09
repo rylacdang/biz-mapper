@@ -2,16 +2,17 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Compass, LocateFixed, Minus, Plus, Layers } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import UserLocationMarker from '@/components/explorer/UserLocationMarker.vue';
 import { useCityMap } from '@/composables/useCityMap';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
-import { formatDistance, readSearch } from '@/lib/explorer';
+import UserLocationMarker from '@/pages/explorer/partials/UserLocationMarker.vue';
 import type {
     Category,
     Coordinates,
     SearchBusiness,
     SearchState,
 } from '@/types';
+import { formatDistance } from '@/utils/geography';
+import { readSearch } from '@/utils/search';
 
 const props = defineProps<{
     places: SearchBusiness[];

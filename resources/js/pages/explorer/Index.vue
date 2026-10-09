@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ChevronDown, ChevronUp, Store, X } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import BusinessDetails from '@/components/explorer/BusinessDetails.vue';
-import BusinessResults from '@/components/explorer/BusinessResults.vue';
-import CityMap from '@/components/explorer/CityMap.vue';
-import ExplorerSearch from '@/components/explorer/ExplorerSearch.vue';
-import ExplorerToolbar from '@/components/explorer/ExplorerToolbar.vue';
-import ListingDrawer from '@/components/explorer/ListingDrawer.vue';
-import OwnerWorkspace from '@/components/explorer/OwnerWorkspace.vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useExplorerPanel } from '@/composables/useExplorerPanel';
 import { useExplorerSearch } from '@/composables/useExplorerSearch';
-import { DEFAULT_CENTER, searchParams } from '@/lib/explorer';
-import business from '@/routes/owner/business';
+import { useOwnerWorkspace } from '@/composables/useOwnerWorkspace';
+import { DEFAULT_CENTER } from '@/constants/map';
+import BusinessDetails from '@/pages/explorer/partials/BusinessDetails.vue';
+import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
+import CityMap from '@/pages/explorer/partials/CityMap.vue';
+import ExplorerSearch from '@/pages/explorer/partials/ExplorerSearch.vue';
+import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
+import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
+import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
 import type { Business, Category, Coordinates, SearchBusiness } from '@/types';
+import { searchParams } from '@/utils/search';
 
 // Page data and discovery state
 const props = withDefaults(
     defineProps<{
         categories?: Category[];
-        allBusinesses?: Business[];
+        allBusinesses?: SearchBusiness[];
         myBusinesses?: Business[];
         trashBusinesses?: Business[];
         canRegister?: boolean;
@@ -34,6 +36,34 @@ const props = withDefaults(
 
 const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
+
+const {
+    workspace,
+    showingTrash,
+    busy,
+    trashError,
+    drawerOpen,
+    editing,
+    handleOpenDrawer,
+    handleCloseDrawer,
+    handleToggleTrash,
+    handleRestoreListing,
+    handleShowExplore,
+    handleShowListings: showOwnerListings,
+} = useOwnerWorkspace(owner);
+
+const {
+    selected,
+    panelScroll,
+    panelOpen,
+    sheet,
+    handleOpenPanel,
+    handleClosePanel,
+    handleSheetDragEnd,
+    handleSheetDragStart,
+    handleExpandSheet,
+    handleCollapseSheet,
+} = useExplorerPanel(workspace);
 
 const center = ref<Coordinates>(DEFAULT_CENTER);
 const userLocation = ref<Coordinates | null>(null);
@@ -58,26 +88,6 @@ const {
 center.value = searchState.initialCenter;
 const mapCenter = ref<Coordinates>(searchState.initialCenter);
 
-// Explorer panel and mobile sheet
-const selected = ref<SearchBusiness | null>(null);
-const panelScroll = ref<HTMLElement>();
-const panelOpen = ref(false);
-const sheet = ref<'collapsed' | 'half' | 'expanded'>('half');
-const startY = ref<number | null>(null);
-
-let panelTrigger: HTMLElement | null = null;
-
-// Owner workspace and listing drawer
-const workspace = ref(false);
-const showingTrash = ref(false);
-const busy = ref(false);
-const trashError = ref('');
-
-const drawerOpen = ref(false);
-const editing = ref<Business | null>(null);
-
-let previousFocus: HTMLElement | null = null;
-
 // Discovery and panel actions
 function handleSelectBusiness(id: number) {
     const place = listings.value.find((p) => p.id === id);
@@ -92,31 +102,9 @@ function handleSelectBusiness(id: number) {
     }
 }
 
-function handleOpenPanel(mode: 'explore' | 'listings' = 'explore') {
-    panelTrigger = document.activeElement as HTMLElement;
-    workspace.value = mode === 'listings';
-    selected.value = null;
-    sheet.value = 'half';
-    panelOpen.value = true;
-
-    nextTick(() => {
-        panelScroll.value
-            ?.closest('aside')
-            ?.querySelector<HTMLButtonElement>(
-                '[aria-label="Close explorer panel"]',
-            )
-            ?.focus({ preventScroll: true });
-    });
-}
-
-function handleClosePanel() {
-    panelOpen.value = false;
-    requestAnimationFrame(() => panelTrigger?.focus({ preventScroll: true }));
-}
-
 function handleSearchNearby() {
     if (!panelOpen.value) {
-        panelTrigger = document.activeElement as HTMLElement;
+        handleOpenPanel();
     }
 
     workspace.value = false;
@@ -132,76 +120,6 @@ function handleMapMove(next: Coordinates) {
     moved.value =
         Math.abs(next.lat - anchor.lat) + Math.abs(next.lng - anchor.lng) >
         0.003;
-}
-
-// Listing actions preserve focus so the drawer returns to its opener.
-function handleOpenDrawer(listing: Business | null = null) {
-    previousFocus = document.activeElement as HTMLElement;
-    editing.value = listing;
-    drawerOpen.value = true;
-}
-
-function handleCloseDrawer() {
-    drawerOpen.value = false;
-    requestAnimationFrame(() => previousFocus?.focus());
-}
-
-function handleToggleTrash() {
-    showingTrash.value = !showingTrash.value;
-
-    if (showingTrash.value) {
-        router.reload({ only: ['trashBusinesses'] });
-    }
-}
-
-function handleRestoreListing(id: number) {
-    busy.value = true;
-    trashError.value = '';
-    router.post(
-        business.restore(id).url,
-        {},
-        {
-            preserveScroll: true,
-            onError: () => {
-                trashError.value =
-                    'Couldn’t restore this listing. Please try again.';
-            },
-            onFinish: () => {
-                busy.value = false;
-            },
-        },
-    );
-}
-
-// Sheet gestures share the same states as the keyboard-accessible buttons.
-function handleSheetDragEnd(event: PointerEvent) {
-    if (startY.value === null) {
-        return;
-    }
-
-    const delta = event.clientY - startY.value;
-    startY.value = null;
-
-    if (Math.abs(delta) > 35) {
-        sheet.value =
-            delta < 0
-                ? sheet.value === 'collapsed'
-                    ? 'half'
-                    : 'expanded'
-                : sheet.value === 'expanded'
-                  ? 'half'
-                  : 'collapsed';
-    }
-}
-
-function handleSheetDragStart(event: PointerEvent) {
-    if ((event.target as HTMLElement).closest('button')) {
-        return;
-    }
-
-    startY.value = event.clientY;
-    // Capture only the drag handle; capturing button taps would swallow their clicks.
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 }
 
 function handleSearchMapArea() {
@@ -223,16 +141,12 @@ function handleLocate(location: Coordinates) {
     });
 }
 
-function handleShowExplore() {
-    workspace.value = false;
-}
-
-function handleShowListings() {
-    workspace.value = true;
+function handleBackToResults() {
     selected.value = null;
 }
 
-function handleBackToResults() {
+function handleShowListings() {
+    showOwnerListings();
     selected.value = null;
 }
 
@@ -252,14 +166,6 @@ function handleExpandSearch() {
     }
 }
 
-function handleExpandSheet() {
-    sheet.value = sheet.value === 'collapsed' ? 'half' : 'expanded';
-}
-
-function handleCollapseSheet() {
-    sheet.value = sheet.value === 'expanded' ? 'half' : 'collapsed';
-}
-
 // Reactive synchronization and navigation lifecycle
 watch(lastSearch, (state) => {
     // Clearing results leaves the camera at its current position.
@@ -268,26 +174,6 @@ watch(lastSearch, (state) => {
         (state.lat !== mapCenter.value.lat || state.lng !== mapCenter.value.lng)
     ) {
         mapCenter.value = { lat: state.lat, lng: state.lng };
-    }
-});
-
-watch(selected, async (place) => {
-    await nextTick();
-    panelScroll.value?.scrollTo({ top: 0 });
-
-    if (place) {
-        panelScroll.value
-            ?.querySelector<HTMLButtonElement>('.back-link')
-            ?.focus({ preventScroll: true });
-    }
-});
-
-watch(owner, (isOwner) => {
-    if (!isOwner) {
-        workspace.value = false;
-        showingTrash.value = false;
-        drawerOpen.value = false;
-        editing.value = null;
     }
 });
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Search, SlidersHorizontal } from 'lucide-vue-next';
-import { categoryIcon } from '@/lib/categoryIcons';
-import { DEFAULT_SEARCH_RADIUS, formatDistance } from '@/lib/explorer';
+import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import type { Category } from '@/types';
+import { categoryIcon } from '@/utils/categoryIcons';
+import { formatDistance } from '@/utils/geography';
 
 withDefaults(
     defineProps<{
