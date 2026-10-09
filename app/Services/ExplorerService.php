@@ -19,7 +19,7 @@ class ExplorerService
     /**
      * Include management records only for their owner.
      */
-    public function pageData(string $category, ?User $user): array
+    public function pageData(string $category, ?User $user, ?string $destination = null): array
     {
         $data = [
             'canRegister' => Features::enabled(Features::registration()),
@@ -29,6 +29,11 @@ class ExplorerService
             )->resolve(),
             'selectedCategory' => $category,
         ];
+
+        if ($destination) {
+            $business = $this->businessRepo->findBySlugWithCategoryOrFail($destination);
+            $data['directionsBusiness'] = (new BusinessProfileResource($business))->resolve();
+        }
 
         if ($user?->role === UserRole::OWNER) {
             $data['myBusinesses'] = $this->businessRepo->getByUserIdWithCategory($user->id);

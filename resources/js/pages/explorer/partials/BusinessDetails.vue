@@ -4,11 +4,18 @@ import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
+import WalkingDirections from '@/pages/explorer/partials/WalkingDirections.vue';
 import type { SearchBusiness } from '@/types';
+import type { WalkingRoute } from '@/types/routing';
 
-defineProps<{ place: SearchBusiness }>();
+defineProps<{
+    place: SearchBusiness;
+    route: WalkingRoute | null;
+    routing: boolean;
+    routeError: string;
+}>();
 
-const emit = defineEmits<{ back: [] }>();
+const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
 </script>
 
 <template>
@@ -32,7 +39,20 @@ const emit = defineEmits<{ back: [] }>();
 
         <!-- Visit, share, and open the full profile -->
         <div class="mt-5">
-            <BusinessActions :place="place" show-profile />
+            <BusinessActions
+                :place="place"
+                show-profile
+                in-explorer
+                :routing="routing"
+                @directions="emit('directions')"
+            />
+            <WalkingDirections
+                :route="route"
+                :loading="routing"
+                :error="routeError"
+                @clear="emit('clearRoute')"
+                @retry="emit('directions')"
+            />
         </div>
 
         <div class="mt-5 border-t border-explorer-line">

@@ -10,15 +10,23 @@ import {
 } from '@/components/ui/dialog';
 import { useBusinessSharing } from '@/composables/useBusinessSharing';
 import { show } from '@/routes/businesses';
+import { index } from '@/routes/explorer';
 import type { SearchBusiness } from '@/types';
 
 const props = withDefaults(
-    defineProps<{ place: SearchBusiness; showProfile?: boolean }>(),
+    defineProps<{
+        place: SearchBusiness;
+        showProfile?: boolean;
+        inExplorer?: boolean;
+        routing?: boolean;
+    }>(),
     { showProfile: false },
 );
 
 const { shareUrl, sharing, message, showManualCopy, shareBusiness } =
     useBusinessSharing(() => props.place);
+
+const emit = defineEmits<{ directions: [] }>();
 
 const directionsUrl = computed(() => {
     const { lat, lng } = props.place;
@@ -32,14 +40,7 @@ const directionsUrl = computed(() => {
         return undefined;
     }
 
-    // Google Maps chooses the origin without including the user's GPS coordinates.
-    const parameters = new URLSearchParams({
-        api: '1',
-        destination: `${lat},${lng}`,
-        travelmode: 'walking',
-    });
-
-    return `https://www.google.com/maps/dir/?${parameters}`;
+    return index.url({ query: { destination: props.place.slug } });
 });
 
 const shareButton = ref<HTMLButtonElement>();
@@ -58,17 +59,25 @@ function handleRestoreShareFocus(event: Event) {
     <!-- Actions work in both the map panel and public profile -->
     <div class="space-y-3">
         <div class="flex flex-wrap gap-2">
-            <a
-                v-if="directionsUrl"
+            <button
+                v-if="directionsUrl && inExplorer"
+                type="button"
+                :disabled="routing"
+                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                @click="emit('directions')"
+            >
+                <Footprints :size="15" />
+                {{ routing ? 'Finding route…' : 'Get directions' }}
+            </button>
+
+            <Link
+                v-else-if="directionsUrl"
                 :href="directionsUrl"
-                target="_blank"
-                rel="noopener noreferrer"
                 class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-4 text-xs font-semibold text-white hover:bg-blue-700"
-                aria-label="Get walking directions in Google Maps"
             >
                 <Footprints :size="15" />
                 Get directions
-            </a>
+            </Link>
 
             <button
                 ref="shareButton"
@@ -81,8 +90,6 @@ function handleRestoreShareFocus(event: Event) {
                 {{ sharing ? 'Sharing…' : 'Share' }}
             </button>
         </div>
-
-        <p class="text-xs text-slate-500">Directions open in Google Maps.</p>
 
         <p v-if="message" role="status" class="text-xs text-explorer-green">
             {{ message }}

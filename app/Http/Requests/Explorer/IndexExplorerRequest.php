@@ -19,6 +19,9 @@ class IndexExplorerRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['category' => ['sometimes', 'string']];
+        return [
+            'category' => ['sometimes', 'string'],
+            'destination' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ];
     }
 }

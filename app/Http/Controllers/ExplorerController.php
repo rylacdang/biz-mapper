@@ -9,9 +9,6 @@ use Inertia\Response;
 
 class ExplorerController extends Controller
 {
-    /**
-     * Use the explorer service for page data.
-     */
     public function __construct(
         private readonly ExplorerService $explorerService
     ) {}
@@ -24,6 +21,7 @@ class ExplorerController extends Controller
         return Inertia::render('explorer/Index', $this->explorerService->pageData(
             $request->validated('category', 'all'),
             $request->user(),
+            $request->validated('destination'),
         ));
     }
 }

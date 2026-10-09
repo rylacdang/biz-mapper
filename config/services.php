@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'routing' => [
+        'url' => env('ROUTING_URL', 'https://routing.openstreetmap.de/routed-foot'),
+    ],
+
 ];

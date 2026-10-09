@@ -5,6 +5,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useExplorerPanel } from '@/composables/useExplorerPanel';
 import { useExplorerSearch } from '@/composables/useExplorerSearch';
 import { useOwnerWorkspace } from '@/composables/useOwnerWorkspace';
+import { useWalkingRoute } from '@/composables/useWalkingRoute';
 import { DEFAULT_CENTER } from '@/constants/map';
 import BusinessDetails from '@/pages/explorer/partials/BusinessDetails.vue';
 import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
@@ -24,6 +25,7 @@ const props = withDefaults(
         myBusinesses?: Business[];
         trashBusinesses?: Business[];
         canRegister?: boolean;
+        directionsBusiness?: SearchBusiness | null;
     }>(),
     {
         categories: () => [],
@@ -31,6 +33,7 @@ const props = withDefaults(
         myBusinesses: () => [],
         trashBusinesses: () => [],
         canRegister: false,
+        directionsBusiness: null,
     },
 );
 
@@ -67,6 +70,47 @@ const {
 
 const center = ref<Coordinates>(DEFAULT_CENTER);
 const userLocation = ref<Coordinates | null>(null);
+const walking = useWalkingRoute(() => userLocation.value);
+const { route: walkingRoute, loading: routing, error: routeError } = walking;
+
+watch(
+    () => selected.value?.slug,
+    (slug) => {
+        if (walking.destination.value?.slug !== slug) {
+            walking.clear();
+        }
+    },
+);
+
+function handleDirections() {
+    if (selected.value) {
+        void walking.start(selected.value);
+    }
+}
+
+function handleClearRoute() {
+    walking.clear();
+
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has('destination')) {
+        return;
+    }
+
+    url.searchParams.delete('destination');
+
+    // Replace the directions entry so refresh and Inertia history stay in sync.
+    router.replace({
+        url: `${url.pathname}${url.search}${url.hash}`,
+        props: (currentProps) => ({
+            ...currentProps,
+            directionsBusiness: null,
+        }),
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
+
 const searchState = useExplorerSearch(
     () => props.allBusinesses,
     () => center.value,
@@ -128,6 +172,10 @@ function handleSearchMapArea() {
 }
 
 function handleLocate(location: Coordinates) {
+    if (walking.destination.value) {
+        return;
+    }
+
     center.value = location;
     panelOpen.value = true;
     workspace.value = false;
@@ -178,7 +226,11 @@ watch(lastSearch, (state) => {
 });
 
 watch(listings, (places) => {
-    if (selected.value && !places.some((p) => p.id === selected.value!.id)) {
+    if (
+        selected.value &&
+        walking.destination.value?.id !== selected.value.id &&
+        !places.some((p) => p.id === selected.value!.id)
+    ) {
         selected.value = null;
     }
 });
@@ -196,6 +248,13 @@ const removeNavigation = router.on('navigate', (event) => {
 
 onMounted(() => {
     searchState.restore(window.location.href);
+
+    if (props.directionsBusiness) {
+        selected.value = props.directionsBusiness;
+        panelOpen.value = true;
+        sheet.value = 'half';
+        handleDirections();
+    }
 });
 
 onUnmounted(removeNavigation);
@@ -224,6 +283,7 @@ onUnmounted(removeNavigation);
             :categories="categories"
             :center="mapCenter"
             :selected="selected"
+            :route="walkingRoute"
             :radius="visibleSearchArea"
             :moved="moved && !workspace"
             @select="handleSelectBusiness"
@@ -391,6 +451,11 @@ onUnmounted(removeNavigation);
                 <BusinessDetails
                     v-else-if="selected"
                     :place="selected"
+                    :route="walkingRoute"
+                    :routing="routing"
+                    :route-error="routeError"
+                    @directions="handleDirections"
+                    @clear-route="handleClearRoute"
                     @back="handleBackToResults"
                 />
 

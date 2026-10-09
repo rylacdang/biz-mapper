@@ -11,6 +11,7 @@ import type {
     SearchBusiness,
     SearchState,
 } from '@/types';
+import type { WalkingRoute } from '@/types/routing';
 import { formatDistance } from '@/utils/geography';
 import { readSearch } from '@/utils/search';
 
@@ -19,6 +20,7 @@ const props = defineProps<{
     categories: Category[];
     center: Coordinates;
     selected: SearchBusiness | null;
+    route: WalkingRoute | null;
     radius: SearchState | null;
     moved: boolean;
     panelOpen: boolean;
@@ -67,8 +69,15 @@ function initializeMap(center: Coordinates, closeUp = false) {
         center,
         props.categories,
         () => {
-            city.setPlaces(props.places);
+            synchronizePlaces();
             city.setRadius(props.radius);
+            city.highlight(props.selected?.id ?? null);
+
+            if (props.selected && !props.route) {
+                city.focus(props.selected, props.panelOpen);
+            }
+
+            city.setRoute(props.route, props.panelOpen);
         },
         closeUp ? 18.5 : 15,
         closeUp ? 40 : undefined,
@@ -76,9 +85,27 @@ function initializeMap(center: Coordinates, closeUp = false) {
 }
 
 // Keep the canvas synchronized with Vue state without rebuilding the map instance.
-watch(() => props.places, city.setPlaces);
+function synchronizePlaces() {
+    const places = [...props.places];
+
+    if (
+        props.selected &&
+        !places.some((place) => place.id === props.selected?.id)
+    ) {
+        places.push(props.selected);
+    }
+
+    city.setPlaces(places);
+}
+
+watch([() => props.places, () => props.selected], synchronizePlaces);
 
 watch(() => props.radius, city.setRadius);
+
+watch(
+    () => props.route,
+    (route) => city.setRoute(route, props.panelOpen),
+);
 
 watch(() => props.center, city.moveCenter);
 
@@ -96,7 +123,9 @@ watch(
 watch(
     () => props.panelOpen,
     (visible) => {
-        if (props.selected) {
+        if (props.route) {
+            city.setRoute(props.route, visible);
+        } else if (props.selected) {
             city.focus(props.selected, visible);
         }
     },
@@ -115,7 +144,7 @@ function handleLocate(recenter = true) {
             emit('userLocation', position);
 
             // Refine the marker without moving the camera or repeating the search.
-            if (recenter && first) {
+            if (recenter && first && !props.route) {
                 city.focus(
                     position,
                     props.panelOpen,

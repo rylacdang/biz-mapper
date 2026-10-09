@@ -10,6 +10,7 @@ import type {
     SearchState,
     UserLocation,
 } from '@/types';
+import type { WalkingRoute } from '@/types/routing';
 import { categoryIconImage } from '@/utils/categoryIcons';
 
 export function useCityMap(
@@ -461,6 +462,77 @@ export function useCityMap(
         };
     }
 
+    function setRoute(route: WalkingRoute | null, panelOpen = false) {
+        if (!ready.value || !map) {
+            return;
+        }
+
+        if (!map.getSource('walking-route')) {
+            map.addSource('walking-route', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: [] },
+            });
+
+            const before = map
+                .getStyle()
+                .layers.find((layer) => layer.id === 'selection')?.id;
+
+            map.addLayer(
+                {
+                    id: 'walking-route-outline',
+                    type: 'line',
+                    source: 'walking-route',
+                    layout: { 'line-cap': 'round', 'line-join': 'round' },
+                    paint: { 'line-color': '#ffffff', 'line-width': 9 },
+                },
+                before,
+            );
+            map.addLayer(
+                {
+                    id: 'walking-route-line',
+                    type: 'line',
+                    source: 'walking-route',
+                    layout: { 'line-cap': 'round', 'line-join': 'round' },
+                    paint: { 'line-color': '#2563eb', 'line-width': 5 },
+                },
+                before,
+            );
+        }
+
+        (map.getSource('walking-route') as GeoJSONSource).setData({
+            type: 'FeatureCollection',
+            features: route
+                ? [
+                      {
+                          type: 'Feature',
+                          properties: {},
+                          geometry: route.geometry,
+                      },
+                  ]
+                : [],
+        });
+
+        if (route) {
+            const bounds = new maplibregl.LngLatBounds();
+            route.geometry.coordinates.forEach(([lng, lat]) =>
+                bounds.extend([lng, lat]),
+            );
+            const mobile = window.innerWidth < 768;
+
+            map.fitBounds(bounds, {
+                padding: {
+                    top: mobile ? 155 : 120,
+                    right: mobile ? 65 : 100,
+                    bottom:
+                        mobile && panelOpen ? window.innerHeight * 0.52 : 90,
+                    left: !mobile && panelOpen ? 420 : 55,
+                },
+                maxZoom: 18.5,
+                duration: reduced() ? 0 : 700,
+            });
+        }
+    }
+
     function toggle3d() {
         is3d.value = !is3d.value;
         map?.easeTo({
@@ -496,6 +568,7 @@ export function useCityMap(
         highlight,
         focus,
         setRadius,
+        setRoute,
         toggle3d,
         zoom: (delta: number) =>
             map?.easeTo({
