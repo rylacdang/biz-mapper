@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ArrowLeft } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
+import { ArrowLeft, ArrowUpRight } from 'lucide-vue-next';
 import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
-import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import WalkingDirections from '@/pages/explorer/partials/WalkingDirections.vue';
+import { show } from '@/routes/businesses';
 import type { SearchBusiness } from '@/types';
 import type { WalkingRoute } from '@/types/routing';
 
@@ -23,7 +24,7 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
     <!-- Shared business content also powers the standalone public profile -->
     <article class="p-5 max-md:pt-1">
         <button
-            class="back-link mb-5 flex items-center gap-2 text-[11px] text-slate-500 hover:text-explorer-blue"
+            class="back-link mb-4 flex items-center gap-2 text-[11px] text-slate-500 hover:text-explorer-blue"
             @click="emit('back')"
         >
             <ArrowLeft :size="16" />
@@ -33,24 +34,15 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
         <BusinessIdentity :place="place" />
 
         <p
-            class="mt-3 text-[12px] leading-[1.85] whitespace-pre-line text-slate-500"
+            class="mt-3 text-[12px] leading-[1.7] whitespace-pre-line text-slate-500"
         >
             {{ place.description }}
         </p>
 
-        <div v-if="place.gallery_photos?.length" class="mt-5">
-            <BusinessGallery
-                :photos="place.gallery_photos"
-                :name="place.name"
-                compact
-            />
-        </div>
-
         <!-- Visit, share, and open the full profile -->
-        <div class="mt-5">
+        <div class="mt-4 space-y-3">
             <BusinessActions
                 :place="place"
-                show-profile
                 in-explorer
                 :routing="routing"
                 @directions="emit('directions')"
@@ -62,13 +54,20 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
                 @clear="emit('clearRoute')"
                 @retry="emit('directions')"
             />
+            <Link
+                :href="show(place.slug).url"
+                class="flex h-9 items-center justify-between rounded-xl border border-explorer-line px-3 text-[11px] font-semibold text-explorer-ink hover:bg-explorer-cloud"
+            >
+                View full profile
+                <ArrowUpRight :size="15" class="text-slate-400" />
+            </Link>
         </div>
 
-        <div class="mt-5 border-t border-explorer-line">
+        <div class="mt-4 border-t border-explorer-line">
             <BusinessContact :place="place" compact />
         </div>
 
-        <div class="mt-5 border-t border-explorer-line pt-5">
+        <div class="border-t border-explorer-line pt-4">
             <BusinessHours :place="place" compact />
         </div>
     </article>

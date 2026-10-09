@@ -18,38 +18,56 @@ const minutes = computed(() =>
 <template>
     <section
         v-if="route || loading || error"
-        class="mt-4 space-y-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3"
+        class="overflow-hidden rounded-xl border border-blue-100 bg-white"
         aria-label="Walking directions"
         aria-live="polite"
     >
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center justify-between gap-3 px-3 pt-3">
             <span
-                class="flex items-center gap-2 text-xs font-semibold text-explorer-blue"
+                class="flex items-center gap-2 text-[11px] font-semibold text-explorer-ink"
             >
-                <Footprints :size="15" />
+                <span
+                    class="grid size-8 place-items-center rounded-lg bg-blue-50 text-explorer-blue"
+                >
+                    <Footprints :size="15" />
+                </span>
                 Walking route
             </span>
             <button
                 type="button"
-                class="flex h-9 items-center gap-1 rounded-lg px-2 text-xs text-slate-500 hover:bg-blue-100"
+                aria-label="Clear route"
+                title="Clear route"
+                class="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-explorer-cloud hover:text-explorer-ink"
                 @click="emit('clear')"
             >
-                <X :size="14" /> Clear route
+                <X :size="15" />
             </button>
         </div>
-        <p v-if="loading" class="text-xs text-slate-500">
+        <p v-if="loading" class="px-3 py-3 text-[11px] text-slate-500">
             Finding a walking route…
         </p>
         <template v-else-if="route">
-            <p class="text-xs font-semibold text-explorer-ink">
-                {{ formatDistance(route.distance / 1000) }} · About
-                {{ minutes }} min on foot
-            </p>
-            <p class="text-[11px] leading-relaxed text-slate-500">
+            <dl
+                class="mx-3 mt-3 grid grid-cols-2 divide-x divide-blue-100 rounded-lg bg-blue-50/70 py-3"
+            >
+                <div class="px-3">
+                    <dt class="text-[10px] text-slate-500">On foot</dt>
+                    <dd class="mt-1 text-sm font-semibold text-explorer-ink">
+                        About {{ minutes }} min
+                    </dd>
+                </div>
+                <div class="px-3">
+                    <dt class="text-[10px] text-slate-500">Distance</dt>
+                    <dd class="mt-1 text-sm font-semibold text-explorer-ink">
+                        {{ formatDistance(route.distance / 1000) }}
+                    </dd>
+                </div>
+            </dl>
+            <p class="px-3 py-3 text-[10px] leading-relaxed text-slate-500">
                 From your location along mapped streets and footpaths.
             </p>
         </template>
-        <div v-else-if="error" class="space-y-2">
+        <div v-else-if="error" class="space-y-2 px-3 py-3">
             <p role="alert" class="text-xs text-red-600">{{ error }}</p>
             <button
                 type="button"
@@ -59,31 +77,36 @@ const minutes = computed(() =>
                 Retry directions
             </button>
         </div>
-        <p class="text-[10px] text-slate-500">
-            Routing by
-            <a
-                href="https://routing.openstreetmap.de/about.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="underline"
-                >FOSSGIS / OSRM</a
-            >
-            ·
-            <a
-                href="https://www.openstreetmap.org/copyright"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="underline"
-                >© OpenStreetMap contributors</a
-            >
-            ·
-            <a
-                href="https://www.openstreetmap.org/fixthemap"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="underline"
-                >Fix the map</a
-            >
-        </p>
+        <div
+            class="space-y-1 border-t border-explorer-line px-3 py-2 text-[9px] leading-relaxed text-slate-400"
+        >
+            <p>
+                Routing by
+                <a
+                    href="https://routing.openstreetmap.de/about.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:text-explorer-blue hover:underline"
+                    >FOSSGIS / OSRM</a
+                >
+            </p>
+            <p>
+                <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:text-explorer-blue hover:underline"
+                    >© OpenStreetMap contributors</a
+                >
+                ·
+                <a
+                    href="https://www.openstreetmap.org/fixthemap"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:text-explorer-blue hover:underline"
+                    >Fix the map</a
+                >
+            </p>
+        </div>
     </section>
 </template>
