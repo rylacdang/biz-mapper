@@ -2,11 +2,17 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Models\Business;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 interface BusinessRepositoryInterface extends BaseRepositoryInterface
 {
+    /**
+     * Find a business profile with its category or throw when missing.
+     */
+    public function findBySlugWithCategoryOrFail(string $slug): Business;
+
     /**
      * Count businesses matching base slug pattern for uniqueness check.
      */

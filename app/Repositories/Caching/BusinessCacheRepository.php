@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Caching;
 
+use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,11 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
     public function getSlugPatternCount(string $slug): int
     {
         return $this->eloquentRepo->getSlugPatternCount($slug);
+    }
+
+    public function findBySlugWithCategoryOrFail(string $slug): Business
+    {
+        return $this->eloquentRepo->findBySlugWithCategoryOrFail($slug);
     }
 
     public function getAllWithCategory(): Collection

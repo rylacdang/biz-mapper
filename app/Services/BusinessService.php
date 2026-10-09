@@ -4,15 +4,41 @@ namespace App\Services;
 
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
-use Illuminate\Support\Str;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class BusinessService
 {
+    /**
+     * Use the business repository for listing workflows.
+     */
     public function __construct(
         private readonly BusinessRepositoryInterface $businessRepo
     ) {}
+
+    /**
+     * Get a business for its public profile.
+     */
+    public function getBusinessProfile(string $slug): Business
+    {
+        return $this->businessRepo->findBySlugWithCategoryOrFail($slug);
+    }
+
+    /**
+     * Build share metadata from the business's actual content.
+     */
+    public function profileMetadata(Business $business): array
+    {
+        return [
+            'title' => $business->name.' | BizMapper',
+            'description' => Str::limit(strip_tags($business->description), 160),
+            'url' => route('businesses.show', $business->slug),
+            'image' => $business->cover_photo
+                ? url(Storage::disk('public')->url($business->cover_photo))
+                : null,
+        ];
+    }
 
     /**
      * Handle business registration logic

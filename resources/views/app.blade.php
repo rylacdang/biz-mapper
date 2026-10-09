@@ -37,8 +37,23 @@
         @fonts
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
+
+        {{-- Public profile previews also work for crawlers without JavaScript. --}}
+        @if (($page['component'] ?? null) === 'businesses/Show')
+            <meta name="description" content="{{ $page['props']['metadata']['description'] }}" data-inertia="description">
+            <link rel="canonical" href="{{ $page['props']['metadata']['url'] }}" data-inertia="canonical">
+            <meta property="og:title" content="{{ $page['props']['metadata']['title'] }}" data-inertia="og:title">
+            <meta property="og:description" content="{{ $page['props']['metadata']['description'] }}" data-inertia="og:description">
+            <meta property="og:url" content="{{ $page['props']['metadata']['url'] }}" data-inertia="og:url">
+            <meta property="og:type" content="website" data-inertia="og:type">
+
+            @if ($page['props']['metadata']['image'])
+                <meta property="og:image" content="{{ $page['props']['metadata']['image'] }}" data-inertia="og:image">
+            @endif
+        @endif
+
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ $page['props']['metadata']['title'] ?? config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

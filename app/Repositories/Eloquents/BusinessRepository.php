@@ -21,6 +21,14 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
             ->count();
     }
 
+    public function findBySlugWithCategoryOrFail(string $slug): Business
+    {
+        return $this->query()
+            ->with('category')
+            ->where('slug', $slug)
+            ->firstOrFail();
+    }
+
     public function getAllWithCategory(): Collection
     {
         return $this->query()->with('category')->get();

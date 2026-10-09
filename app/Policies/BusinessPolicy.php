@@ -8,6 +8,14 @@ use App\Models\User;
 class BusinessPolicy extends BasePolicy
 {
     /**
+     * Allow guests to read listings available in the public explorer.
+     */
+    public function view(?User $user, Business $business): bool
+    {
+        return ! $business->trashed();
+    }
+
+    /**
      * Determine whether the user can update the model.
      */
     public function update(User $user, Business $business): bool
