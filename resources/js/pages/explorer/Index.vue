@@ -271,7 +271,7 @@ onUnmounted(removeNavigation);
             '[&_:focus-visible]:outline-3 [&_:focus-visible]:outline-offset-3',
             '[&_:focus-visible]:outline-explorer-blue [&_a]:[-webkit-tap-highlight-color:transparent]',
             '[&_button]:cursor-pointer [&_button]:[-webkit-tap-highlight-color:transparent]',
-            '[&_button:disabled]:cursor-wait [&_button:disabled]:opacity-55',
+            '[&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-55',
             '[&_h1]:font-explorer-heading [&_h2]:font-explorer-heading [&_h3]:font-explorer-heading',
         ]"
         :data-sheet="sheet"

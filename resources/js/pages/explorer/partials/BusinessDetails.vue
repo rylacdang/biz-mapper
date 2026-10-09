@@ -2,6 +2,7 @@
 import { ArrowLeft } from 'lucide-vue-next';
 import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
+import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import WalkingDirections from '@/pages/explorer/partials/WalkingDirections.vue';
@@ -36,6 +37,14 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
         >
             {{ place.description }}
         </p>
+
+        <div v-if="place.gallery_photos?.length" class="mt-5">
+            <BusinessGallery
+                :photos="place.gallery_photos"
+                :name="place.name"
+                compact
+            />
+        </div>
 
         <!-- Visit, share, and open the full profile -->
         <div class="mt-5">

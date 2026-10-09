@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'website',
     'cover_photo',
     'logo',
+    'gallery_photos',
     'hours',
     'status',
     'view_count',
@@ -47,6 +48,7 @@ class Business extends Model
             'lng' => 'float',
             'status' => BusinessStatus::class,
             'view_count' => 'integer',
+            'gallery_photos' => 'array',
         ];
     }
 

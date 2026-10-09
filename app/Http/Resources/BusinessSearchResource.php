@@ -22,6 +22,7 @@ class BusinessSearchResource extends JsonResource
             'website' => $this->website,
             'cover_photo' => $this->cover_photo,
             'logo' => $this->logo,
+            'gallery_photos' => $this->gallery_photos ?? [],
             'lat' => $this->lat,
             'lng' => $this->lng,
             'distance' => round((float) $this->distance, 2),

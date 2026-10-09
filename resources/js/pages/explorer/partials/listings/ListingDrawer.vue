@@ -5,6 +5,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { useListingAddress } from '@/composables/useListingAddress';
 import { DEFAULT_CENTER } from '@/constants/map';
+import GalleryUpload from '@/pages/explorer/partials/listings/GalleryUpload.vue';
 import LocationPicker from '@/pages/explorer/partials/listings/LocationPicker.vue';
 import RequiredMark from '@/pages/explorer/partials/listings/RequiredMark.vue';
 import StreetAddressInput from '@/pages/explorer/partials/listings/StreetAddressInput.vue';
@@ -14,6 +15,7 @@ import type {
     Business,
     Category,
     Coordinates,
+    GalleryPhotoDraft,
     OpeningHours,
 } from '@/types';
 import { photoUrl } from '@/utils/businesses';
@@ -70,6 +72,11 @@ const form = useForm({
     website: props.listing?.website ?? '',
     cover_photo: null as File | null,
     logo: null as File | null,
+    gallery: (props.listing?.gallery_photos ?? []).map((path) => ({
+        path,
+        file: null,
+    })) as GalleryPhotoDraft[],
+    replace_gallery: true,
     hours: Object.fromEntries(
         days.map((day) => [
             day,
@@ -97,6 +104,11 @@ const {
 const preview = ref(photoUrl(props.listing?.cover_photo));
 const logoPreview = ref(photoUrl(props.listing?.logo));
 const urls: string[] = [];
+const galleryErrors = computed(() =>
+    Object.entries(form.errors)
+        .filter(([field]) => field.startsWith('gallery'))
+        .map(([, message]) => message),
+);
 const saved = computed(() => Boolean(props.listing));
 const ownerLocation = useExplorerLocation();
 const { error: locationError } = ownerLocation;
@@ -228,7 +240,10 @@ function validationStep(field: string): number {
         return 0;
     }
 
-    if (['cover_photo', 'logo', 'phone', 'website'].includes(field)) {
+    if (
+        field.startsWith('gallery') ||
+        ['cover_photo', 'logo', 'phone', 'website'].includes(field)
+    ) {
         return 1;
     }
 
@@ -600,6 +615,12 @@ function handleDelete() {
                     >
                         {{ form.errors.logo }}
                     </p>
+
+                    <GalleryUpload
+                        v-model="form.gallery"
+                        :errors="galleryErrors"
+                        :disabled="form.processing"
+                    />
 
                     <label
                         class="mt-[17px] flex flex-col gap-2 text-[11px] font-[700]"

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, MapPin } from 'lucide-vue-next';
 import { computed } from 'vue';
 import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
+import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
@@ -102,6 +103,10 @@ const explorerUrl = computed(
                 class="mt-8 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14"
             >
                 <div class="space-y-8">
+                    <BusinessGallery
+                        :photos="business.gallery_photos"
+                        :name="business.name"
+                    />
                     <section aria-label="About this business">
                         <h2 class="font-explorer-heading text-xl font-semibold">
                             A little about this place

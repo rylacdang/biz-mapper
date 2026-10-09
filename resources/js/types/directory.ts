@@ -39,6 +39,7 @@ export interface SearchBusiness extends Coordinates {
     website?: string | null;
     cover_photo?: string | null;
     logo?: string | null;
+    gallery_photos?: string[];
     category?: Category | null;
     hours?: Record<string, OpeningHours>;
     distance?: number;
@@ -67,4 +68,9 @@ export interface SearchState extends Coordinates {
     keyword: string;
     category: string;
     radius: number;
+}
+
+export interface GalleryPhotoDraft {
+    path: string | null;
+    file: File | null;
 }

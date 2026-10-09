@@ -24,6 +24,7 @@ class BusinessProfileResource extends JsonResource
             'website' => $this->website,
             'cover_photo' => $this->cover_photo,
             'logo' => $this->logo,
+            'gallery_photos' => $this->gallery_photos ?? [],
             'hours' => $this->hours,
             'category' => $this->whenLoaded('category', fn () => [
                 'id' => $this->category->id,

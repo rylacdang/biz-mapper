@@ -7,6 +7,7 @@ use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class BusinessService
 {
@@ -34,45 +35,96 @@ class BusinessService
      */
     public function registerBusiness(array $data, int $userId, UploadedFile $coverPhoto, ?UploadedFile $logo): Business
     {
-        $data['user_id'] = $userId;
-        $data['slug'] = $this->generateUniqueSlug($data['name']);
+        $uploads = [];
 
-        // Handle file uploads
-        $data['cover_photo'] = $coverPhoto->store('covers', 'public');
+        try {
+            $data['user_id'] = $userId;
+            $data['slug'] = $this->generateUniqueSlug($data['name']);
+            $data['gallery_photos'] = $this->storeGallery($data['gallery'] ?? [], $uploads);
+            unset($data['gallery'], $data['replace_gallery']);
 
-        if ($logo) {
-            $data['logo'] = $logo->store('logos', 'public');
+            $data['cover_photo'] = $coverPhoto->store('covers', 'public');
+            $uploads[] = $data['cover_photo'];
+
+            if ($logo) {
+                $data['logo'] = $logo->store('logos', 'public');
+                $uploads[] = $data['logo'];
+            }
+
+            return $this->businessRepo->create($data);
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($uploads);
+
+            throw $exception;
         }
-
-        return $this->businessRepo->create($data);
     }
 
     /**
-     * Handle business update logic — replaces files only when new ones are uploaded.
+     * Save listing changes before deleting replaced photos.
      */
     public function updateBusiness(Business $business, array $data, ?UploadedFile $coverPhoto, ?UploadedFile $logo): bool
     {
-        // Prevent null from validated() overwriting existing file paths
+        $uploads = [];
+        $removed = [];
         unset($data['cover_photo'], $data['logo']);
 
-        if ($coverPhoto) {
-            Storage::disk('public')->delete($business->cover_photo);
-            $data['cover_photo'] = $coverPhoto->store('covers', 'public');
-        }
-
-        if ($logo) {
-            if ($business->logo) {
-                Storage::disk('public')->delete($business->logo);
+        try {
+            if (array_key_exists('gallery', $data) || filter_var($data['replace_gallery'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $data['gallery_photos'] = $this->storeGallery($data['gallery'] ?? [], $uploads);
+                $removed = array_diff($business->gallery_photos ?? [], $data['gallery_photos']);
             }
-            $data['logo'] = $logo->store('logos', 'public');
+
+            unset($data['gallery'], $data['replace_gallery']);
+
+            if ($coverPhoto) {
+                $data['cover_photo'] = $coverPhoto->store('covers', 'public');
+                $uploads[] = $data['cover_photo'];
+                $removed[] = $business->cover_photo;
+            }
+
+            if ($logo) {
+                $data['logo'] = $logo->store('logos', 'public');
+                $uploads[] = $data['logo'];
+
+                if ($business->logo) {
+                    $removed[] = $business->logo;
+                }
+            }
+
+            if (isset($data['name']) && $data['name'] !== $business->name) {
+                $data['slug'] = $this->generateUniqueSlug($data['name']);
+            }
+
+            $updated = $this->businessRepo->update($business->id, $data);
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($uploads);
+
+            throw $exception;
         }
 
-        // Regenerate slug only if name changed
-        if (isset($data['name']) && $data['name'] !== $business->name) {
-            $data['slug'] = $this->generateUniqueSlug($data['name']);
+        Storage::disk('public')->delete($updated ? array_values($removed) : $uploads);
+
+        return $updated;
+    }
+
+    /**
+     * Keep the submitted photo order and track new files for failure cleanup.
+     */
+    private function storeGallery(array $entries, array &$uploads): array
+    {
+        $photos = [];
+
+        foreach ($entries as $entry) {
+            if (($entry['file'] ?? null) instanceof UploadedFile) {
+                $path = $entry['file']->store('business-gallery', 'public');
+                $uploads[] = $path;
+                $photos[] = $path;
+            } else {
+                $photos[] = $entry['path'];
+            }
         }
 
-        return $this->businessRepo->update($business->id, $data);
+        return $photos;
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Business;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBusinessRequest extends FormRequest
 {
@@ -37,6 +38,11 @@ class StoreBusinessRequest extends FormRequest
             'website' => ['nullable', 'url', 'max:255'],
             'cover_photo' => ['required', 'image', 'max:5120'], // Max 5MB
             'logo' => ['nullable', 'image', 'max:2048'], // Max 2MB
+            'replace_gallery' => ['sometimes', 'boolean'],
+            'gallery' => ['sometimes', 'nullable', 'array', 'max:5'],
+            'gallery.*' => ['array:path,file'],
+            'gallery.*.path' => ['nullable', 'required_without:gallery.*.file', 'prohibits:gallery.*.file', 'distinct:strict', 'string', Rule::in([])],
+            'gallery.*.file' => ['nullable', 'required_without:gallery.*.path', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'hours' => ['required', 'array'],
             'hours.*.open' => ['nullable', 'date_format:H:i'],
             'hours.*.close' => ['nullable', 'date_format:H:i'],
