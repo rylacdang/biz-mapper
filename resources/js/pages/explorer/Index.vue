@@ -315,7 +315,7 @@ onUnmounted(removeNavigation);
             :class="[
                 'absolute top-[88px] bottom-6 left-4 z-4 flex w-[340px] flex-col overflow-hidden',
                 'rounded-[20px] border border-white bg-white shadow-[0_12px_50px_#172b4d19]',
-                'max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:h-[43dvh] max-md:w-full',
+                'max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:h-[52dvh] max-md:w-full',
                 'max-md:rounded-[24px_24px_0_0] max-md:transition-[height] max-md:duration-200',
                 'max-md:group-data-[sheet=collapsed]/explorer:h-[100px]',
                 'max-md:group-data-[sheet=expanded]/explorer:h-[calc(100dvh-88px)]',
@@ -413,22 +413,6 @@ onUnmounted(removeNavigation);
                 </button>
             </nav>
 
-            <!-- Category and radius filters -->
-            <div
-                v-if="!workspace && !selected"
-                class="pt-4 max-md:group-data-[sheet=collapsed]/explorer:hidden"
-            >
-                <ExplorerSearch
-                    :show-keyword="false"
-                    v-model:keyword="keyword"
-                    v-model:category="category"
-                    v-model:radius="radius"
-                    :categories="categories"
-                    :loading="loading"
-                    @search="handleSearchNearby"
-                />
-            </div>
-
             <div
                 ref="panelScroll"
                 :class="[
@@ -436,6 +420,22 @@ onUnmounted(removeNavigation);
                     'overscroll-contain max-md:group-data-[sheet=collapsed]/explorer:hidden',
                 ]"
             >
+                <!-- Category and radius filters -->
+                <div
+                    v-if="!workspace && !selected"
+                    class="shrink-0 pt-2 max-md:group-data-[sheet=collapsed]/explorer:hidden"
+                >
+                    <ExplorerSearch
+                        :show-keyword="false"
+                        v-model:keyword="keyword"
+                        v-model:category="category"
+                        v-model:radius="radius"
+                        :categories="categories"
+                        :loading="loading"
+                        @search="handleSearchNearby"
+                    />
+                </div>
+
                 <!-- Owner listings, place details, or discovery results -->
                 <OwnerWorkspace
                     v-if="workspace && owner"
@@ -524,6 +524,7 @@ onUnmounted(removeNavigation);
                         "
                         @select="handleSelectBusiness"
                         @expand="handleExpandSearch"
+                        @page-change="panelScroll?.scrollTo({ top: 0 })"
                     />
                 </template>
 

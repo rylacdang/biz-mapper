@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Search, SlidersHorizontal } from 'lucide-vue-next';
+import { SliderRange, SliderRoot, SliderThumb, SliderTrack } from 'reka-ui';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
+import CategoryPicker from '@/pages/explorer/partials/CategoryPicker.vue';
 import type { Category } from '@/types';
-import { categoryIcon } from '@/utils/categoryIcons';
 import { formatDistance } from '@/utils/geography';
 
 withDefaults(
@@ -22,6 +23,12 @@ const category = defineModel<string>('category', { required: true });
 const radius = defineModel<number>('radius', { required: true });
 
 const emit = defineEmits<{ search: []; reset: [] }>();
+
+function handleRadius(values: number[] | undefined) {
+    if (values?.[0] !== undefined) {
+        radius.value = values[0];
+    }
+}
 </script>
 
 <template>
@@ -54,52 +61,12 @@ const emit = defineEmits<{ search: []; reset: [] }>();
         </div>
 
         <!-- Category selection -->
-        <div
-            :class="[
-                'mx-0 mt-[13px] mb-[15px] flex max-h-19 [scrollbar-width:thin]',
-                '[scrollbar-color:#dce5ef_transparent] flex-wrap gap-[6px] overflow-auto max-md:mx-0',
-                'max-md:mt-[9px] max-md:mb-0 max-md:max-h-[none] max-md:[scrollbar-width:none]',
-                'max-md:flex-nowrap max-md:pb-[2px]',
-            ]"
-            aria-label="Business categories"
-        >
-            <button
-                :class="[
-                    'flex items-center gap-[5px] rounded-[8px] border border-[#e5eaf1] bg-white px-[9px]',
-                    'py-[6px] text-[10px] whitespace-nowrap text-[#68778f] data-[active=true]:border-[#cbdcff]',
-                    'data-[active=true]:bg-[#edf3ff] data-[active=true]:font-[750]',
-                    'data-[active=true]:text-explorer-blue max-md:px-[10px] max-md:py-[7px]',
-                ]"
-                type="button"
-                :data-active="category === 'all'"
-                @click="category = 'all'"
+        <div class="mt-3 mb-4 space-y-2 max-md:mt-0 max-md:mb-3">
+            <span
+                class="block text-[11px] font-semibold text-explorer-ink max-md:hidden"
+                >Category</span
             >
-                ✦ All places
-            </button>
-
-            <button
-                :class="[
-                    'group/step flex items-center gap-[5px] rounded-[8px] border border-[#e5eaf1] bg-white',
-                    'px-[9px] py-[6px] text-[10px] whitespace-nowrap text-[#68778f]',
-                    'data-[active=true]:border-[#cbdcff] data-[active=true]:bg-[#edf3ff]',
-                    'data-[active=true]:font-[750] data-[active=true]:text-explorer-blue max-md:px-[10px]',
-                    'max-md:py-[7px]',
-                ]"
-                v-for="item in categories"
-                :key="item.id"
-                type="button"
-                :data-active="category === item.name"
-                @click="category = item.name"
-            >
-                <component
-                    :is="categoryIcon(item.icon)"
-                    :size="14"
-                    class="shrink-0"
-                    :style="{ color: item.color }"
-                    aria-hidden="true"
-                />
-                {{ item.name }}
-            </button>
+            <CategoryPicker v-model="category" :categories="categories" />
         </div>
 
         <!-- Radius selection -->
@@ -121,31 +88,42 @@ const emit = defineEmits<{ search: []; reset: [] }>();
             </strong>
         </div>
 
-        <input
-            class="mt-3 block h-1 w-full cursor-pointer accent-explorer-blue"
-            :id="`explorer-radius-${suffix}`"
-            v-model.number="radius"
-            type="range"
+        <SliderRoot
+            class="group/radius relative mt-1 flex h-6 w-full cursor-pointer touch-none items-center select-none"
+            :model-value="[radius]"
             :min="DEFAULT_SEARCH_RADIUS"
-            step="0.5"
-            max="50"
-            aria-label="Search radius in kilometers"
-            :aria-describedby="`explorer-radius-help-${suffix}`"
-        />
+            :step="0.5"
+            :max="50"
+            @update:model-value="handleRadius"
+        >
+            <SliderTrack
+                class="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+            >
+                <SliderRange
+                    class="absolute h-full rounded-full bg-explorer-blue"
+                />
+            </SliderTrack>
+            <SliderThumb
+                :id="`explorer-radius-${suffix}`"
+                aria-label="Search radius in kilometers"
+                :aria-valuetext="formatDistance(radius)"
+                :aria-describedby="`explorer-radius-help-${suffix}`"
+                class="block size-4 rounded-full border border-explorer-blue bg-white group-active/radius:shadow-[0_0_0_4px_#cbd5e1]"
+            />
+        </SliderRoot>
 
         <p
             :id="`explorer-radius-help-${suffix}`"
-            class="mt-3 text-[11px] leading-relaxed text-slate-500"
+            class="mt-3 text-[11px] leading-relaxed text-slate-500 max-md:sr-only"
         >
-            Choose a category and radius, then click Search this area to apply
-            your changes.
+            Apply your category and radius with Search this area.
         </p>
 
         <button
             v-if="!showKeyword"
             type="submit"
             :disabled="loading"
-            class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-explorer-blue py-2.5 text-xs font-semibold text-white"
+            class="mt-4 flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-explorer-blue text-xs font-semibold text-white"
         >
             <Search :size="15" />
             Search this area
