@@ -114,6 +114,7 @@ function handleClearRoute() {
 const searchState = useExplorerSearch(
     () => props.allBusinesses,
     () => center.value,
+    () => userLocation.value,
 );
 
 const {

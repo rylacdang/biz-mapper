@@ -9,6 +9,7 @@ import { readSearch, searchParams } from '@/utils/search';
 export function useExplorerSearch(
     initial: () => SearchBusiness[],
     center: () => Coordinates,
+    userLocation: () => Coordinates | null = () => null,
 ) {
     // Filters are shared by the toolbar, explorer panel, and URL state.
     const keyword = ref('');
@@ -29,7 +30,8 @@ export function useExplorerSearch(
     const visibleSearchArea = computed<SearchState>(
         () =>
             searchArea.value ?? {
-                ...center(),
+                // Camera movement must not move the user's nearby discovery area.
+                ...(userLocation() ?? initialSearch ?? DEFAULT_CENTER),
                 radius: DEFAULT_SEARCH_RADIUS,
                 category: 'all',
                 keyword: '',
