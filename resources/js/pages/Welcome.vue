@@ -51,10 +51,12 @@ const {
     error,
     lastSearch,
     searchArea,
+    visibleSearchArea,
     moved,
 } = searchState;
 
 center.value = searchState.initialCenter;
+const mapCenter = ref<Coordinates>(searchState.initialCenter);
 
 // Explorer panel and mobile sheet
 const selected = ref<SearchBusiness | null>(null);
@@ -209,6 +211,10 @@ function handleSearchMapArea() {
 
 function handleLocate(location: Coordinates) {
     center.value = location;
+    panelOpen.value = true;
+    workspace.value = false;
+    selected.value = null;
+    sheet.value = 'half';
     searchState.search({
         ...location,
         keyword: keyword.value,
@@ -235,7 +241,15 @@ function handleResetSearch() {
 }
 
 function handleRetrySearch() {
-    searchState.search();
+    searchState.search(searchArea.value ?? undefined);
+}
+
+function handleExpandSearch() {
+    radius.value = 1;
+
+    if (searchArea.value) {
+        searchState.search({ ...searchArea.value, radius: 1 });
+    }
 }
 
 function handleExpandSheet() {
@@ -247,6 +261,16 @@ function handleCollapseSheet() {
 }
 
 // Reactive synchronization and navigation lifecycle
+watch(lastSearch, (state) => {
+    // Clearing results leaves the camera at its current position.
+    if (
+        state &&
+        (state.lat !== mapCenter.value.lat || state.lng !== mapCenter.value.lng)
+    ) {
+        mapCenter.value = { lat: state.lat, lng: state.lng };
+    }
+});
+
 watch(selected, async (place) => {
     await nextTick();
     panelScroll.value?.scrollTo({ top: 0 });
@@ -312,9 +336,9 @@ onUnmounted(removeNavigation);
             :panel-open="panelOpen"
             :places="listings"
             :categories="categories"
-            :center="lastSearch ?? searchState.initialCenter"
+            :center="mapCenter"
             :selected="selected"
-            :radius="searchArea"
+            :radius="visibleSearchArea"
             :moved="moved && !workspace"
             @select="handleSelectBusiness"
             @move="handleMapMove"
@@ -493,7 +517,7 @@ onUnmounted(removeNavigation);
                                 class="mx-0 mt-0 mb-1 text-[13px] font-[650] tracking-[-0.35px]"
                             >
                                 {{
-                                    lastSearch
+                                    searchArea
                                         ? 'Around your search'
                                         : 'Places to discover'
                                 }}
@@ -509,7 +533,7 @@ onUnmounted(removeNavigation);
                         </div>
 
                         <button
-                            v-if="lastSearch"
+                            v-if="searchArea"
                             class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5]"
                             aria-label="Clear search"
                             @click="handleResetSearch"
@@ -543,7 +567,11 @@ onUnmounted(removeNavigation);
                     <BusinessResults
                         :places="listings"
                         :loading="loading"
+                        :can-expand="
+                            !!searchArea && searchArea.radius < 1 && !error
+                        "
                         @select="handleSelectBusiness"
+                        @expand="handleExpandSearch"
                     />
                 </template>
 

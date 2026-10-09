@@ -361,7 +361,7 @@ export function useCityMap(
                 id: 'user-accuracy-fill',
                 type: 'fill',
                 source: 'user-accuracy',
-                paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.08 },
+                paint: { 'fill-color': '#d97706', 'fill-opacity': 0.1 },
             },
             'clusters',
         );
@@ -371,9 +371,10 @@ export function useCityMap(
                 type: 'line',
                 source: 'user-accuracy',
                 paint: {
-                    'line-color': '#2563eb',
-                    'line-opacity': 0.25,
-                    'line-width': 1,
+                    'line-color': '#d97706',
+                    'line-opacity': 0.7,
+                    'line-width': 1.5,
+                    'line-dasharray': [2, 2],
                 },
             },
             'clusters',
@@ -396,7 +397,7 @@ export function useCityMap(
                     id: 'radius-fill',
                     type: 'fill',
                     source: 'radius',
-                    paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.04 },
+                    paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.14 },
                 },
                 'clusters',
             );
@@ -407,9 +408,8 @@ export function useCityMap(
                     source: 'radius',
                     paint: {
                         'line-color': '#2563eb',
-                        'line-width': 2,
-                        'line-dasharray': [3, 3],
-                        'line-opacity': 0.6,
+                        'line-width': 3,
+                        'line-opacity': 0.95,
                     },
                 },
                 'clusters',

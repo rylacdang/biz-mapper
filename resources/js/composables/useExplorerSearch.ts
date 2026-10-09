@@ -1,7 +1,9 @@
 import { router } from '@inertiajs/vue3';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import {
     DEFAULT_CENTER,
+    DEFAULT_SEARCH_RADIUS,
+    distanceInKilometers,
     latestRequest,
     readSearch,
     searchParams,
@@ -15,7 +17,7 @@ export function useExplorerSearch(
     // Filters are shared by the toolbar, explorer panel, and URL state.
     const keyword = ref('');
     const category = ref('all');
-    const radius = ref(5);
+    const radius = ref(DEFAULT_SEARCH_RADIUS);
 
     const results = ref<SearchBusiness[] | null>(null);
     const loading = ref(false);
@@ -28,18 +30,35 @@ export function useExplorerSearch(
     const moved = ref(false);
 
     const requests = latestRequest();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let restoring = false;
-
-    const listings = computed(
+    const visibleSearchArea = computed<SearchState>(
         () =>
-            results.value ??
-            initial().filter(
-                (b) =>
-                    category.value === 'all' ||
-                    b.category?.name === category.value,
-            ),
+            searchArea.value ?? {
+                ...center(),
+                radius: DEFAULT_SEARCH_RADIUS,
+                category: 'all',
+                keyword: '',
+            },
     );
+
+    const listings = computed(() => {
+        const area = visibleSearchArea.value;
+
+        // Clearing filters still limits discovery to the circle shown on the map.
+        return (searchArea.value ? (results.value ?? []) : initial())
+            .map((place) => ({
+                ...place,
+                distance: distanceInKilometers(area, place),
+            }))
+            .filter(
+                (place) =>
+                    Number.isFinite(place.distance) &&
+                    place.distance <= area.radius &&
+                    (area.category === 'all' ||
+                        place.category?.name === area.category ||
+                        String(place.category?.id) === area.category),
+            )
+            .sort((a, b) => a.distance - b.distance || a.id - b.id);
+    });
 
     async function search(state?: SearchState, updateUrl = true) {
         const target = state ?? {
@@ -51,6 +70,7 @@ export function useExplorerSearch(
         const request = requests.start();
         // The radius is known before the listings response arrives.
         searchArea.value = target;
+        results.value = [];
         loading.value = true;
         error.value = '';
 
@@ -106,7 +126,9 @@ export function useExplorerSearch(
 
     function reset(updateUrl = true) {
         requests.cancel();
-        clearTimeout(timer);
+        keyword.value = '';
+        category.value = 'all';
+        radius.value = DEFAULT_SEARCH_RADIUS;
         results.value = null;
         lastSearch.value = null;
         searchArea.value = null;
@@ -115,77 +137,30 @@ export function useExplorerSearch(
         moved.value = false;
 
         if (updateUrl) {
-            router.get(
-                window.location.pathname,
-                {},
-                {
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: ['allBusinesses'],
-                },
-            );
+            // Clearing a local search should not recreate the map through a page visit.
+            router.push({
+                url: window.location.pathname,
+                preserveState: true,
+                preserveScroll: true,
+            });
         }
     }
 
     function restore(url: string) {
-        // Suppress filter watchers while restoring a single history snapshot.
-        restoring = true;
         const state = readSearch(url);
         keyword.value = state?.keyword ?? '';
         category.value = state?.category ?? 'all';
-        radius.value = state?.radius ?? 5;
+        radius.value = state?.radius ?? DEFAULT_SEARCH_RADIUS;
 
         if (state) {
             void search(state, false);
         } else {
             reset(false);
         }
-
-        queueMicrotask(() => {
-            restoring = false;
-        });
     }
-
-    // Filter changes rerun an active search without fetching during map drags.
-    watch(
-        category,
-        () => {
-            if (!restoring && (lastSearch.value || loading.value)) {
-                void search({
-                    ...(lastSearch.value ?? center()),
-                    category: category.value,
-                    radius: radius.value,
-                    keyword: keyword.value,
-                });
-            }
-        },
-        { flush: 'sync' },
-    );
-
-    watch(
-        radius,
-        () => {
-            clearTimeout(timer);
-
-            if (!restoring && (lastSearch.value || loading.value)) {
-                // Invalidate immediately so old results cannot win during the debounce.
-                requests.cancel();
-                timer = setTimeout(() => {
-                    void search({
-                        ...(lastSearch.value ?? center()),
-                        radius: radius.value,
-                        category: category.value,
-                        keyword: keyword.value,
-                    });
-                }, 300);
-            }
-        },
-        { flush: 'sync' },
-    );
 
     onUnmounted(() => {
         requests.cancel();
-        clearTimeout(timer);
     });
 
     return {
@@ -198,6 +173,7 @@ export function useExplorerSearch(
         error,
         lastSearch,
         searchArea,
+        visibleSearchArea,
         moved,
         search,
         reset,

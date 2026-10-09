@@ -1,7 +1,30 @@
 import type { SearchBusiness, SearchState, Coordinates } from '@/types';
 
 export const DEFAULT_CENTER: Coordinates = { lat: 14.5547, lng: 121.0244 };
+export const DEFAULT_SEARCH_RADIUS = 0.5;
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
+
+export function formatDistance(kilometers: number): string {
+    return kilometers < 1
+        ? `${Math.round(kilometers * 1000)} m`
+        : `${Number(kilometers.toFixed(1))} km`;
+}
+
+export function distanceInKilometers(
+    from: Coordinates,
+    to: Coordinates,
+): number {
+    const radians = (value: number) => (value * Math.PI) / 180;
+    const latitude = radians(to.lat - from.lat);
+    const longitude = radians(to.lng - from.lng);
+    const arc =
+        Math.sin(latitude / 2) ** 2 +
+        Math.cos(radians(from.lat)) *
+            Math.cos(radians(to.lat)) *
+            Math.sin(longitude / 2) ** 2;
+
+    return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, arc)));
+}
 
 export function photoUrl(path?: string | null): string | undefined {
     if (!path) {
@@ -58,7 +81,7 @@ export function readSearch(url: string): SearchState | null {
         !Number.isFinite(radius) ||
         Math.abs(lat) > 90 ||
         Math.abs(lng) > 180 ||
-        radius < 1 ||
+        radius < DEFAULT_SEARCH_RADIUS ||
         radius > 50
     ) {
         return null;

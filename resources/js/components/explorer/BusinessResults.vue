@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ArrowUpRight, MapPin, Store } from 'lucide-vue-next';
-import { photoUrl } from '@/lib/explorer';
+import { formatDistance, photoUrl } from '@/lib/explorer';
 import type { SearchBusiness } from '@/types';
 
-defineProps<{ places: SearchBusiness[]; loading: boolean }>();
+defineProps<{
+    places: SearchBusiness[];
+    loading: boolean;
+    canExpand?: boolean;
+}>();
 
-const emit = defineEmits<{ select: [id: number] }>();
+const emit = defineEmits<{ select: [id: number]; expand: [] }>();
 </script>
 
 <template>
@@ -65,7 +69,7 @@ const emit = defineEmits<{ select: [id: number] }>();
                     v-if="place.distance !== undefined"
                     class="mt-[6px] block text-[10px] text-explorer-green"
                 >
-                    {{ place.distance.toFixed(1) }} km from search center
+                    {{ formatDistance(place.distance) }} from search center
                 </span>
             </div>
         </button>
@@ -82,6 +86,15 @@ const emit = defineEmits<{ select: [id: number] }>();
             <p class="text-[12px] leading-[1.7]">
                 Try a wider radius or a different category.
             </p>
+
+            <button
+                v-if="canExpand"
+                type="button"
+                class="mt-4 rounded-xl bg-explorer-blue px-4 py-2.5 text-xs font-semibold text-white hover:bg-blue-700"
+                @click="emit('expand')"
+            >
+                Expand to 1 km
+            </button>
         </div>
     </div>
 </template>

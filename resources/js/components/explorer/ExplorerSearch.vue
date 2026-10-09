@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Search, SlidersHorizontal } from 'lucide-vue-next';
 import { categoryIcon } from '@/lib/categoryIcons';
+import { DEFAULT_SEARCH_RADIUS, formatDistance } from '@/lib/explorer';
 import type { Category } from '@/types';
 
 withDefaults(
@@ -115,7 +116,7 @@ const emit = defineEmits<{ search: []; reset: [] }>();
             <strong
                 class="rounded-[5px] bg-[#edf3ff] px-[6px] py-[3px] font-[750] text-explorer-blue"
             >
-                {{ radius }} km
+                {{ formatDistance(radius) }}
             </strong>
         </div>
 
@@ -124,10 +125,20 @@ const emit = defineEmits<{ search: []; reset: [] }>();
             :id="`explorer-radius-${suffix}`"
             v-model.number="radius"
             type="range"
-            min="1"
+            :min="DEFAULT_SEARCH_RADIUS"
+            step="0.5"
             max="50"
             aria-label="Search radius in kilometers"
+            :aria-describedby="`explorer-radius-help-${suffix}`"
         />
+
+        <p
+            :id="`explorer-radius-help-${suffix}`"
+            class="mt-3 text-[11px] leading-relaxed text-slate-500"
+        >
+            Choose a category and radius, then click Search this area to apply
+            your changes.
+        </p>
 
         <button
             v-if="!showKeyword"

@@ -5,7 +5,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue';
 import UserLocationMarker from '@/components/explorer/UserLocationMarker.vue';
 import { useCityMap } from '@/composables/useCityMap';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
-import { readSearch } from '@/lib/explorer';
+import { formatDistance, readSearch } from '@/lib/explorer';
 import type {
     Category,
     Coordinates,
@@ -155,6 +155,29 @@ onUnmounted(() => {
         ]"
         aria-label="Interactive business map"
     ></div>
+
+    <!-- Distinguish the discovery area from the device's location uncertainty -->
+    <div
+        v-if="radius && ready"
+        class="absolute top-20 right-4 z-2 flex flex-col gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-[11px] text-slate-600 shadow-sm max-md:right-16 max-md:text-[10px]"
+        aria-label="Map circle legend"
+    >
+        <span class="flex items-center gap-2">
+            <span
+                class="size-2.5 rounded-full border-2 border-blue-600 bg-blue-100"
+                aria-hidden="true"
+            ></span>
+            {{ formatDistance(radius.radius) }} search area
+        </span>
+
+        <span v-if="userMarkerElement" class="flex items-center gap-2">
+            <span
+                class="size-2.5 rounded-full border border-dashed border-amber-600 bg-amber-100"
+                aria-hidden="true"
+            ></span>
+            GPS accuracy · {{ Math.round(accuracy) }} m
+        </span>
+    </div>
 
     <!-- Map loading and recoverable failures -->
     <div
