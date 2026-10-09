@@ -16,7 +16,7 @@ withDefaults(defineProps<{ place: SearchBusiness; compact?: boolean }>(), {
             compact ? 'text-[12px] leading-[1.6]' : 'text-sm leading-relaxed',
         ]"
     >
-        <div class="flex items-start gap-3 py-4">
+        <div :class="['flex items-start gap-3', compact ? 'py-3' : 'py-4']">
             <MapPin :size="18" class="mt-0.5 shrink-0 text-explorer-blue" />
             <p>{{ place.address }}</p>
         </div>
@@ -24,7 +24,10 @@ withDefaults(defineProps<{ place: SearchBusiness; compact?: boolean }>(), {
         <a
             v-if="place.phone && place.phone.replace(/[^+\d]/g, '')"
             :href="`tel:${place.phone.replace(/[^+\d]/g, '')}`"
-            class="flex items-center gap-3 py-4 hover:text-explorer-blue"
+            :class="[
+                'flex items-center gap-3 hover:text-explorer-blue',
+                compact ? 'py-3' : 'py-4',
+            ]"
         >
             <Phone :size="18" class="shrink-0 text-explorer-blue" />
             <span>{{ place.phone }}</span>
@@ -35,7 +38,10 @@ withDefaults(defineProps<{ place: SearchBusiness; compact?: boolean }>(), {
             :href="websiteUrl(place.website)"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex items-center gap-3 py-4 hover:text-explorer-blue"
+            :class="[
+                'flex items-center gap-3 hover:text-explorer-blue',
+                compact ? 'py-3' : 'py-4',
+            ]"
         >
             <Globe :size="18" class="shrink-0 text-explorer-blue" />
             <span>Visit website ↗</span>

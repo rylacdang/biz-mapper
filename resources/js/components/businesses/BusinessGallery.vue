@@ -10,9 +10,19 @@ import {
 import { photoUrl } from '@/utils/businesses';
 
 const props = withDefaults(
-    defineProps<{ photos?: string[]; name: string; compact?: boolean }>(),
-    { photos: () => [], compact: false },
+    defineProps<{
+        photos?: string[];
+        name: string;
+        compact?: boolean;
+        showHeading?: boolean;
+    }>(),
+    { photos: () => [], compact: false, showHeading: true },
 );
+defineSlots<{
+    default(props: {
+        openPhoto: (index: number, event: Event) => void;
+    }): unknown;
+}>();
 const current = ref(0);
 const open = ref(false);
 let trigger: HTMLElement | null = null;
@@ -52,7 +62,7 @@ function handleMove(offset: number) {
         aria-label="Business photo gallery"
         class="space-y-3"
     >
-        <div class="flex items-center justify-between gap-3">
+        <div v-if="showHeading" class="flex items-center justify-between gap-3">
             <h2
                 :class="
                     compact
@@ -67,37 +77,39 @@ function handleMove(offset: number) {
                 {{ photos.length === 1 ? 'photo' : 'photos' }}</span
             >
         </div>
-        <div
-            :class="
-                compact
-                    ? 'flex gap-2 overflow-x-auto pb-2'
-                    : 'grid grid-cols-2 gap-3 sm:grid-cols-3'
-            "
-        >
-            <button
-                v-for="(photo, index) in photos"
-                :key="photo"
-                type="button"
-                :aria-label="`View photo ${index + 1} of ${name}`"
-                :class="[
-                    'overflow-hidden rounded-xl bg-explorer-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-explorer-blue',
-                    compact ? 'h-24 w-32 shrink-0' : 'aspect-[4/3]',
-                ]"
-                @click="handleOpen(index, $event)"
+        <slot :open-photo="handleOpen">
+            <div
+                :class="
+                    compact
+                        ? 'flex gap-2 overflow-x-auto pb-2'
+                        : 'grid grid-cols-2 gap-3 sm:grid-cols-3'
+                "
             >
-                <img
-                    :src="photoUrl(photo)"
-                    :alt="`${name} gallery photo ${index + 1}`"
-                    loading="lazy"
-                    class="h-full w-full object-cover transition-transform hover:scale-105 motion-reduce:transition-none"
-                />
-            </button>
-        </div>
+                <button
+                    v-for="(photo, index) in photos"
+                    :key="photo"
+                    type="button"
+                    :aria-label="`View photo ${index + 1} of ${name}`"
+                    :class="[
+                        'overflow-hidden rounded-xl bg-explorer-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-explorer-blue',
+                        compact ? 'h-24 w-32 shrink-0' : 'aspect-[4/3]',
+                    ]"
+                    @click="handleOpen(index, $event)"
+                >
+                    <img
+                        :src="photoUrl(photo)"
+                        :alt="`${name} gallery photo ${index + 1}`"
+                        loading="lazy"
+                        class="h-full w-full object-cover transition-transform hover:scale-105 motion-reduce:transition-none"
+                    />
+                </button>
+            </div>
+        </slot>
     </section>
 
     <Dialog v-model:open="open">
         <DialogContent
-            class="max-h-[90dvh] max-w-4xl gap-4 overflow-y-auto rounded-2xl bg-white font-explorer-body text-explorer-ink scheme-light"
+            class="h-[92dvh] w-[calc(100%-2rem)] max-w-[1400px] grid-rows-[auto_minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-2xl bg-white p-4 font-explorer-body text-explorer-ink scheme-light sm:max-w-[1400px] sm:p-6"
             @close-auto-focus="handleRestoreFocus"
             @keydown.left.prevent="handleMove(-1)"
             @keydown.right.prevent="handleMove(1)"
@@ -111,7 +123,7 @@ function handleMove(offset: number) {
                 v-if="selectedPhoto"
                 :src="photoUrl(selectedPhoto)"
                 :alt="`${name} gallery photo ${current + 1}`"
-                class="max-h-[65dvh] w-full rounded-xl bg-explorer-cloud object-contain"
+                class="h-full min-h-0 w-full rounded-xl bg-explorer-cloud object-contain"
             />
             <div class="flex items-center justify-between gap-3">
                 <button
