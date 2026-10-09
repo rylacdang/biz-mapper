@@ -1,9 +1,8 @@
 import type { FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as CityMap, Marker } from 'maplibre-gl';
 import { onUnmounted, ref, shallowRef } from 'vue';
-import { categoryIconImage } from '@/lib/categoryIcons';
-import { MAP_STYLE } from '@/lib/explorer';
-import { maplibregl } from '@/lib/maplibre';
+import { MAP_STYLE } from '@/constants/map';
+import { maplibregl } from '@/maps/maplibre';
 import type {
     Category,
     Coordinates,
@@ -11,6 +10,7 @@ import type {
     SearchState,
     UserLocation,
 } from '@/types';
+import { categoryIconImage } from '@/utils/categoryIcons';
 
 export function useCityMap(
     select: (id: number) => void,

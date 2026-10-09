@@ -1,14 +1,10 @@
 import { router } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref } from 'vue';
-import {
-    DEFAULT_CENTER,
-    DEFAULT_SEARCH_RADIUS,
-    distanceInKilometers,
-    latestRequest,
-    readSearch,
-    searchParams,
-} from '@/lib/explorer';
+import { DEFAULT_CENTER, DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import type { Coordinates, SearchBusiness, SearchState } from '@/types';
+import { distanceInKilometers } from '@/utils/geography';
+import { latestRequest } from '@/utils/requests';
+import { readSearch, searchParams } from '@/utils/search';
 
 export function useExplorerSearch(
     initial: () => SearchBusiness[],
