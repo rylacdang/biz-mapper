@@ -1,22 +1,31 @@
 import { router } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref } from 'vue';
 import { DEFAULT_CENTER, DEFAULT_SEARCH_RADIUS } from '@/constants/map';
-import type { Coordinates, SearchBusiness, SearchState } from '@/types';
-import { distanceInKilometers } from '@/utils/geography';
+import type {
+    BusinessMarker,
+    Coordinates,
+    SearchBusiness,
+    SearchPagination,
+    SearchState,
+} from '@/types';
 import { latestRequest } from '@/utils/requests';
 import { readSearch, searchParams } from '@/utils/search';
 
 export function useExplorerSearch(
-    initial: () => SearchBusiness[],
     center: () => Coordinates,
     userLocation: () => Coordinates | null = () => null,
 ) {
-    // Filters are shared by the toolbar, explorer panel, and URL state.
     const keyword = ref('');
     const category = ref('all');
     const radius = ref(DEFAULT_SEARCH_RADIUS);
-
-    const results = ref<SearchBusiness[] | null>(null);
+    const listings = ref<SearchBusiness[]>([]);
+    const markers = ref<BusinessMarker[]>([]);
+    const pagination = ref<SearchPagination>({
+        current_page: 1,
+        last_page: 1,
+        per_page: 20,
+        total: 0,
+    });
     const loading = ref(false);
     const error = ref('');
     const initialSearch = readSearch(
@@ -25,12 +34,17 @@ export function useExplorerSearch(
     const lastSearch = ref<SearchState | null>(null);
     const searchArea = ref<SearchState | null>(initialSearch);
     const moved = ref(false);
-
     const requests = latestRequest();
+    const selections = latestRequest();
+    const selecting = ref(false);
+    let initialized = false;
+    let requestedPage = 1;
+    let pendingState: SearchState | null = null;
+    let pendingCleared = false;
+
     const visibleSearchArea = computed<SearchState>(
         () =>
             searchArea.value ?? {
-                // Camera movement must not move the user's nearby discovery area.
                 ...(userLocation() ?? initialSearch ?? DEFAULT_CENTER),
                 radius: DEFAULT_SEARCH_RADIUS,
                 category: 'all',
@@ -38,48 +52,52 @@ export function useExplorerSearch(
             },
     );
 
-    const listings = computed(() => {
-        const area = visibleSearchArea.value;
-
-        // Clearing filters still limits discovery to the circle shown on the map.
-        return (searchArea.value ? (results.value ?? []) : initial())
-            .map((place) => ({
-                ...place,
-                distance: distanceInKilometers(area, place),
-            }))
-            .filter(
-                (place) =>
-                    Number.isFinite(place.distance) &&
-                    place.distance <= area.radius &&
-                    (area.category === 'all' ||
-                        place.category?.name === area.category ||
-                        String(place.category?.id) === area.category),
-            )
-            .sort((a, b) => a.distance - b.distance || a.id - b.id);
-    });
-
-    async function search(state?: SearchState, updateUrl = true) {
+    async function search(
+        state?: SearchState,
+        updateUrl = true,
+        page = 1,
+        cleared = false,
+    ) {
         const target = state ?? {
             ...center(),
             keyword: keyword.value,
             category: category.value,
             radius: radius.value,
         };
+        const includeMarkers =
+            page === 1 ||
+            !lastSearch.value ||
+            searchParams(target).toString() !==
+                searchParams(lastSearch.value).toString();
         const request = requests.start();
-        // The radius is known before the listings response arrives.
-        searchArea.value = target;
-        results.value = [];
+        selections.cancel();
+        selecting.value = false;
+        initialized = true;
+        requestedPage = page;
+        pendingState = target;
+        pendingCleared = cleared;
+        searchArea.value = cleared ? null : target;
         loading.value = true;
         error.value = '';
 
+        if (includeMarkers) {
+            listings.value = [];
+            markers.value = [];
+            pagination.value = {
+                current_page: 1,
+                last_page: 1,
+                per_page: 20,
+                total: 0,
+            };
+        }
+
         try {
-            const response = await fetch(
-                `/businesses/search?${searchParams(target)}`,
-                {
-                    signal: request.signal,
-                    headers: { Accept: 'application/json' },
-                },
-            );
+            const query = searchParams(target, page);
+            query.set('include_markers', includeMarkers ? '1' : '0');
+            const response = await fetch(`/businesses/search?${query}`, {
+                signal: request.signal,
+                headers: { Accept: 'application/json' },
+            });
 
             if (!response.ok) {
                 throw new Error('Search failed');
@@ -88,24 +106,39 @@ export function useExplorerSearch(
             const json = (await response.json()) as {
                 status: string;
                 data: SearchBusiness[];
+                markers?: BusinessMarker[];
+                meta: SearchPagination;
             };
 
-            // Aborting alone cannot reject a response that has already resolved.
             if (!request.isCurrent()) {
                 return;
             }
 
-            if (json.status !== 'success' || !Array.isArray(json.data)) {
+            if (
+                json.status !== 'success' ||
+                !Array.isArray(json.data) ||
+                !json.meta ||
+                (includeMarkers && !Array.isArray(json.markers))
+            ) {
                 throw new Error('Invalid search response');
             }
 
-            results.value = json.data;
-            lastSearch.value = target;
+            listings.value = json.data;
+            pagination.value = json.meta;
+            requestedPage = json.meta.current_page;
+
+            if (json.markers) {
+                markers.value = json.markers;
+            }
+
+            lastSearch.value = cleared ? null : target;
             moved.value = false;
+
+            loading.value = false;
 
             if (updateUrl) {
                 router.push({
-                    url: `${window.location.pathname}?${searchParams(target)}`,
+                    url: `${window.location.pathname}?${searchParams(target, json.meta.current_page)}`,
                     preserveScroll: true,
                     preserveState: true,
                 });
@@ -113,7 +146,7 @@ export function useExplorerSearch(
         } catch {
             if (request.isCurrent()) {
                 error.value =
-                    'We couldn’t load nearby places. Try searching again.';
+                    'We could not load nearby places. Try searching again.';
             }
         } finally {
             if (request.isCurrent()) {
@@ -123,19 +156,15 @@ export function useExplorerSearch(
     }
 
     function reset(updateUrl = true) {
-        requests.cancel();
         keyword.value = '';
         category.value = 'all';
         radius.value = DEFAULT_SEARCH_RADIUS;
-        results.value = null;
         lastSearch.value = null;
         searchArea.value = null;
-        error.value = '';
-        loading.value = false;
         moved.value = false;
+        void search(visibleSearchArea.value, false, 1, true);
 
         if (updateUrl) {
-            // Clearing a local search should not recreate the map through a page visit.
             router.push({
                 url: window.location.pathname,
                 preserveState: true,
@@ -146,19 +175,125 @@ export function useExplorerSearch(
 
     function restore(url: string) {
         const state = readSearch(url);
+        const requested = Number(
+            new URL(url, 'http://localhost').searchParams.get('page') ?? 1,
+        );
+        const page =
+            Number.isInteger(requested) && requested > 0 && requested <= 100000
+                ? requested
+                : 1;
+        const sameSearch =
+            state &&
+            lastSearch.value &&
+            searchParams(state).toString() ===
+                searchParams(lastSearch.value).toString();
+
+        if (
+            loading.value &&
+            ((state &&
+                pendingState &&
+                !pendingCleared &&
+                searchParams(state).toString() ===
+                    searchParams(pendingState).toString() &&
+                page === requestedPage) ||
+                (!state && pendingCleared))
+        ) {
+            return;
+        }
+
+        // Inertia emits navigate for our own URL updates too.
+        if (
+            initialized &&
+            !loading.value &&
+            ((sameSearch && page === pagination.value.current_page) ||
+                (!state && !lastSearch.value))
+        ) {
+            return;
+        }
+
         keyword.value = state?.keyword ?? '';
         category.value = state?.category ?? 'all';
         radius.value = state?.radius ?? DEFAULT_SEARCH_RADIUS;
 
         if (state) {
-            void search(state, false);
+            void search(state, false, page);
         } else {
             reset(false);
         }
     }
 
+    function changePage(page: number) {
+        if (loading.value || page < 1 || page > pagination.value.last_page) {
+            return;
+        }
+
+        void search(searchArea.value ?? visibleSearchArea.value, true, page);
+    }
+
+    function retry() {
+        void search(
+            searchArea.value ?? visibleSearchArea.value,
+            !!searchArea.value,
+            requestedPage,
+            !searchArea.value,
+        );
+    }
+
+    function cancelSelection() {
+        selections.cancel();
+        selecting.value = false;
+    }
+
+    async function findBusiness(id: number): Promise<SearchBusiness | null> {
+        const request = selections.start();
+        selecting.value = false;
+        const listed = listings.value.find((place) => place.id === id);
+
+        if (listed) {
+            return listed;
+        }
+
+        const pin = markers.value.find((place) => place.id === id);
+
+        if (!pin) {
+            return null;
+        }
+
+        selecting.value = true;
+
+        try {
+            const response = await fetch(
+                `/businesses/${encodeURIComponent(pin.slug)}`,
+                {
+                    signal: request.signal,
+                    headers: { Accept: 'application/json' },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error('Place unavailable');
+            }
+
+            const json = (await response.json()) as { data: SearchBusiness };
+
+            return request.isCurrent() ? json.data : null;
+        } catch {
+            if (request.isCurrent()) {
+                error.value =
+                    'This place could not be loaded. Select it again or search again.';
+            }
+
+            return null;
+        } finally {
+            if (request.isCurrent()) {
+                selecting.value = false;
+            }
+        }
+    }
+
     onUnmounted(() => {
         requests.cancel();
+        selections.cancel();
     });
 
     return {
@@ -166,7 +301,8 @@ export function useExplorerSearch(
         category,
         radius,
         listings,
-        results,
+        markers,
+        pagination,
         loading,
         error,
         lastSearch,
@@ -176,6 +312,11 @@ export function useExplorerSearch(
         search,
         reset,
         restore,
+        changePage,
+        retry,
+        findBusiness,
+        cancelSelection,
+        selecting,
         initialCenter: initialSearch ?? DEFAULT_CENTER,
     };
 }

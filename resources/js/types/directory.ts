@@ -74,3 +74,17 @@ export interface GalleryPhotoDraft {
     path: string | null;
     file: File | null;
 }
+
+// Map pins carry no profile content or owner fields.
+export interface BusinessMarker extends Coordinates {
+    id: number;
+    slug: string;
+    category_id: number | string | null;
+}
+
+export interface SearchPagination {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+}

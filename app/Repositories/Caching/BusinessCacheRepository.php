@@ -4,6 +4,7 @@ namespace App\Repositories\Caching;
 
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
@@ -54,9 +55,6 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $this->eloquentRepo->getTrashedByUserIdWithCategory($userId);
     }
 
-    /**
-     * Find a soft-deleted business or throw when missing.
-     */
     public function findTrashedOrFail(int|string $id): Model
     {
         return $this->eloquentRepo->findTrashedOrFail($id);
@@ -73,8 +71,13 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $restored;
     }
 
-    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null, int $page = 1): LengthAwarePaginator
     {
-        return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category);
+        return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category, $page);
+    }
+
+    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    {
+        return $this->eloquentRepo->getNearbyMarkers($latitude, $longitude, $radius, $keyword, $category);
     }
 }

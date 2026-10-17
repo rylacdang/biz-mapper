@@ -24,9 +24,6 @@ class ExplorerService
         $data = [
             'canRegister' => Features::enabled(Features::registration()),
             'categories' => $this->categoryRepo->all(),
-            'allBusinesses' => BusinessProfileResource::collection(
-                $this->businessRepo->getByCategoryWithCategory($category)
-            )->resolve(),
             'selectedCategory' => $category,
         ];
 

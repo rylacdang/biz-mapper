@@ -7,6 +7,7 @@ use App\Http\Requests\Business\ShowBusinessRequest;
 use App\Http\Resources\BusinessProfileResource;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Services\BusinessService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,11 +22,15 @@ class ShowController extends Controller
     /**
      * Display a shareable business profile.
      */
-    public function __invoke(ShowBusinessRequest $request): Response
+    public function __invoke(ShowBusinessRequest $request): Response|JsonResponse
     {
         $business = $this->businessRepo->findBySlugWithCategoryOrFail($request->validated('slug'));
 
         Gate::authorize('view', $business);
+
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json(['data' => (new BusinessProfileResource($business))->resolve($request)]);
+        }
 
         return Inertia::render('businesses/Show', [
             'business' => (new BusinessProfileResource($business))->resolve($request),

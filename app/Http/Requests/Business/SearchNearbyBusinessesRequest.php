@@ -23,9 +23,11 @@ class SearchNearbyBusinessesRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'page' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            'include_markers' => ['sometimes', 'boolean'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'radius' => ['required', 'numeric', 'min:0.1'],
+            'radius' => ['required', 'numeric', 'min:0.1', 'max:50'],
             'keyword' => ['sometimes', 'nullable', 'string', 'max:255'],
             'category' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];

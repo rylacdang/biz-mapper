@@ -6,6 +6,7 @@ import { useCityMap } from '@/composables/useCityMap';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import UserLocationMarker from '@/pages/explorer/partials/UserLocationMarker.vue';
 import type {
+    BusinessMarker,
     Category,
     Coordinates,
     SearchBusiness,
@@ -16,7 +17,7 @@ import { formatDistance } from '@/utils/geography';
 import { readSearch } from '@/utils/search';
 
 const props = defineProps<{
-    places: SearchBusiness[];
+    places: BusinessMarker[];
     categories: Category[];
     center: Coordinates;
     selected: SearchBusiness | null;
@@ -92,7 +93,13 @@ function synchronizePlaces() {
         props.selected &&
         !places.some((place) => place.id === props.selected?.id)
     ) {
-        places.push(props.selected);
+        places.push({
+            id: props.selected.id,
+            slug: props.selected.slug,
+            lat: props.selected.lat,
+            lng: props.selected.lng,
+            category_id: props.selected.category?.id ?? null,
+        });
     }
 
     city.setPlaces(places);

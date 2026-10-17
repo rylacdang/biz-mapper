@@ -18,6 +18,7 @@ class BusinessSearchResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'address' => $this->address,
+            'hours' => $this->hours,
             'phone' => $this->phone,
             'website' => $this->website,
             'cover_photo' => $this->cover_photo,
@@ -25,7 +26,7 @@ class BusinessSearchResource extends JsonResource
             'gallery_photos' => $this->gallery_photos ?? [],
             'lat' => $this->lat,
             'lng' => $this->lng,
-            'distance' => round((float) $this->distance, 2),
+            'distance' => (float) $this->distance,
             'category' => $this->category ? [
                 'id' => $this->category->id,
                 'name' => $this->category->name,

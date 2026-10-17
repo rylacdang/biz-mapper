@@ -1,41 +1,24 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Store } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
-import type { SearchBusiness } from '@/types';
+import type { SearchBusiness, SearchPagination } from '@/types';
 import { photoUrl } from '@/utils/businesses';
 import { formatDistance } from '@/utils/geography';
 
 const props = defineProps<{
     places: SearchBusiness[];
     loading: boolean;
+    pagination: SearchPagination;
     canExpand?: boolean;
 }>();
 
 const emit = defineEmits<{
     select: [id: number];
     expand: [];
-    pageChange: [];
+    pageChange: [page: number];
 }>();
 
-const PAGE_SIZE = 20;
-const page = ref(1);
-const pageCount = computed(() => Math.ceil(props.places.length / PAGE_SIZE));
-const start = computed(() => (page.value - 1) * PAGE_SIZE);
-const visiblePlaces = computed(() =>
-    props.places.slice(start.value, start.value + PAGE_SIZE),
-);
-
-// New searches start at the nearest results; map pins retain every match.
-watch(
-    () => props.places,
-    () => {
-        page.value = 1;
-    },
-);
-
 function handlePage(offset: number) {
-    page.value = Math.min(pageCount.value, Math.max(1, page.value + offset));
-    emit('pageChange');
+    emit('pageChange', props.pagination.current_page + offset);
 }
 </script>
 
@@ -48,7 +31,7 @@ function handlePage(offset: number) {
         <!-- Compact rows keep names, categories, and distances easy to scan. -->
         <div class="space-y-3">
             <button
-                v-for="place in visiblePlaces"
+                v-for="place in places"
                 :key="place.id"
                 type="button"
                 class="group/place flex w-full items-center gap-3 rounded-xl border border-explorer-line bg-white p-2.5 text-left transition-colors hover:bg-blue-50/40 motion-reduce:transition-none"
@@ -112,7 +95,7 @@ function handlePage(offset: number) {
         </div>
 
         <nav
-            v-if="pageCount > 1 && !loading"
+            v-if="pagination.last_page > 1"
             aria-label="Results pages"
             class="mt-3 space-y-3 border-t border-explorer-line pt-4"
         >
@@ -120,25 +103,34 @@ function handlePage(offset: number) {
                 class="text-center text-[10px] text-slate-500"
                 aria-live="polite"
             >
-                {{ start + 1 }} -
-                {{ Math.min(start + PAGE_SIZE, places.length) }} of
-                {{ places.length }} places
+                {{ (pagination.current_page - 1) * pagination.per_page + 1 }} -
+                {{
+                    Math.min(
+                        pagination.current_page * pagination.per_page,
+                        pagination.total,
+                    )
+                }}
+                of {{ pagination.total }} places
             </p>
             <div class="flex items-center justify-between gap-3">
                 <button
                     type="button"
-                    :disabled="page === 1"
+                    :disabled="loading || pagination.current_page === 1"
                     class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line px-3 text-[11px] font-semibold hover:bg-explorer-cloud disabled:opacity-40"
                     @click="handlePage(-1)"
                 >
                     <ChevronLeft :size="14" /> Previous
                 </button>
                 <span class="text-[10px] text-slate-400"
-                    >{{ page }} / {{ pageCount }}</span
+                    >{{ pagination.current_page }} /
+                    {{ pagination.last_page }}</span
                 >
                 <button
                     type="button"
-                    :disabled="page === pageCount"
+                    :disabled="
+                        loading ||
+                        pagination.current_page === pagination.last_page
+                    "
                     class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line px-3 text-[11px] font-semibold hover:bg-explorer-cloud disabled:opacity-40"
                     @click="handlePage(1)"
                 >

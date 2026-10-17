@@ -6,7 +6,7 @@ import { maplibregl } from '@/maps/maplibre';
 import type {
     Category,
     Coordinates,
-    SearchBusiness,
+    BusinessMarker,
     SearchState,
     UserLocation,
 } from '@/types';
@@ -258,7 +258,7 @@ export function useCityMap(
         }
     }
 
-    function setPlaces(places: SearchBusiness[]) {
+    function setPlaces(places: BusinessMarker[]) {
         if (!ready.value || !map) {
             return;
         }
@@ -271,7 +271,7 @@ export function useCityMap(
                     type: 'Point',
                     coordinates: [Number(b.lng), Number(b.lat)],
                 },
-                properties: { id: b.id, icon: `category-${b.category?.id}` },
+                properties: { id: b.id, icon: `category-${b.category_id}` },
             })),
         });
         highlight(selectedId);

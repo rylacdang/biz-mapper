@@ -1,14 +1,20 @@
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import type { SearchState } from '@/types';
 
-export function searchParams(state: SearchState): URLSearchParams {
-    return new URLSearchParams({
+export function searchParams(state: SearchState, page = 1): URLSearchParams {
+    const params = new URLSearchParams({
         lat: String(state.lat),
         lng: String(state.lng),
         radius: String(state.radius),
         keyword: state.keyword,
         category: state.category,
     });
+
+    if (page > 1) {
+        params.set('page', String(page));
+    }
+
+    return params;
 }
 
 export function readSearch(url: string): SearchState | null {

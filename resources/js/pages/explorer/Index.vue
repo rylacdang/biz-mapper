@@ -15,13 +15,11 @@ import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
 import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
 import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
 import type { Business, Category, Coordinates, SearchBusiness } from '@/types';
-import { searchParams } from '@/utils/search';
 
 // Page data and discovery state
 const props = withDefaults(
     defineProps<{
         categories?: Category[];
-        allBusinesses?: SearchBusiness[];
         myBusinesses?: Business[];
         trashBusinesses?: Business[];
         canRegister?: boolean;
@@ -29,7 +27,6 @@ const props = withDefaults(
     }>(),
     {
         categories: () => [],
-        allBusinesses: () => [],
         myBusinesses: () => [],
         trashBusinesses: () => [],
         canRegister: false,
@@ -112,7 +109,6 @@ function handleClearRoute() {
 }
 
 const searchState = useExplorerSearch(
-    () => props.allBusinesses,
     () => center.value,
     () => userLocation.value,
 );
@@ -122,6 +118,9 @@ const {
     category,
     radius,
     listings,
+    markers,
+    pagination,
+    selecting,
     loading,
     error,
     lastSearch,
@@ -134,18 +133,25 @@ center.value = searchState.initialCenter;
 const mapCenter = ref<Coordinates>(searchState.initialCenter);
 
 // Discovery and panel actions
-function handleSelectBusiness(id: number) {
-    const place = listings.value.find((p) => p.id === id);
+async function handleSelectBusiness(id: number) {
+    workspace.value = false;
+    panelOpen.value = true;
+    sheet.value = 'half';
+
+    const place = await searchState.findBusiness(id);
 
     if (place) {
-        selected.value = {
-            ...props.allBusinesses.find((p) => p.id === id),
-            ...place,
-        };
+        selected.value = place;
         sheet.value = 'half';
         panelOpen.value = true;
     }
 }
+
+watch(panelOpen, (open) => {
+    if (!open) {
+        searchState.cancelSelection();
+    }
+});
 
 function handleSearchNearby() {
     if (!panelOpen.value) {
@@ -204,7 +210,7 @@ function handleResetSearch() {
 }
 
 function handleRetrySearch() {
-    searchState.search(searchArea.value ?? undefined);
+    searchState.retry();
 }
 
 function handleExpandSearch() {
@@ -226,7 +232,7 @@ watch(lastSearch, (state) => {
     }
 });
 
-watch(listings, (places) => {
+watch(markers, (places) => {
     if (
         selected.value &&
         walking.destination.value?.id !== selected.value.id &&
@@ -238,13 +244,7 @@ watch(listings, (places) => {
 
 // Restore filters on Inertia history changes without adding another history entry.
 const removeNavigation = router.on('navigate', (event) => {
-    const url = event.detail.page.url;
-    const query = lastSearch.value ? searchParams(lastSearch.value) : '';
-    const expectedUrl = `${window.location.pathname}?${query}`;
-
-    if (url !== expectedUrl) {
-        searchState.restore(url);
-    }
+    searchState.restore(event.detail.page.url);
 });
 
 onMounted(() => {
@@ -280,7 +280,7 @@ onUnmounted(removeNavigation);
         <!-- Full-screen city map -->
         <CityMap
             :panel-open="panelOpen"
-            :places="listings"
+            :places="markers"
             :categories="categories"
             :center="mapCenter"
             :selected="selected"
@@ -297,7 +297,7 @@ onUnmounted(removeNavigation);
         <!-- Floating search, account, and owner controls -->
         <ExplorerToolbar
             v-model:keyword="keyword"
-            :count="listings.length"
+            :count="pagination.total"
             :loading="loading"
             :owner="owner"
             :panel-open="panelOpen"
@@ -436,6 +436,14 @@ onUnmounted(removeNavigation);
                     />
                 </div>
 
+                <p
+                    v-if="selecting"
+                    role="status"
+                    class="px-5 py-3 text-xs text-explorer-blue"
+                >
+                    Loading place details�
+                </p>
+
                 <!-- Owner listings, place details, or discovery results -->
                 <OwnerWorkspace
                     v-if="workspace && owner"
@@ -479,7 +487,7 @@ onUnmounted(removeNavigation);
                                 {{
                                     loading
                                         ? 'Finding your next favorite…'
-                                        : `${listings.length} local ${listings.length === 1 ? 'place' : 'places'}`
+                                        : `${pagination.total} local ${pagination.total === 1 ? 'place' : 'places'}`
                                 }}
                             </span>
                         </div>
@@ -497,7 +505,7 @@ onUnmounted(removeNavigation);
                             v-else
                             class="rounded-[6px] bg-[#f2f5fa] px-2 py-1 text-[10px] font-[700] text-[#64748b]"
                         >
-                            {{ listings.length }}
+                            {{ pagination.total }}
                         </span>
                     </div>
 
@@ -519,12 +527,13 @@ onUnmounted(removeNavigation);
                     <BusinessResults
                         :places="listings"
                         :loading="loading"
+                        :pagination="pagination"
                         :can-expand="
                             !!searchArea && searchArea.radius < 1 && !error
                         "
                         @select="handleSelectBusiness"
                         @expand="handleExpandSearch"
-                        @page-change="panelScroll?.scrollTo({ top: 0 })"
+                        @page-change="searchState.changePage"
                     />
                 </template>
 

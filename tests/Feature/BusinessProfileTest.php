@@ -95,3 +95,15 @@ test('initial html includes escaped profile sharing metadata', function () {
         ->assertSee('Coffee &quot;Corner&quot; &lt;Shop&gt; | BizMapper', false)
         ->assertSee('rel="canonical"', false);
 });
+
+test('map pins can request one authorized public profile as json', function () {
+    $this->getJson(route('businesses.show', $this->business->slug))
+        ->assertOk()
+        ->assertJsonPath('data.id', $this->business->id)
+        ->assertJsonPath('data.hours.monday.closed', false)
+        ->assertJsonMissingPath('data.user_id')
+        ->assertJsonMissingPath('data.status');
+
+    $this->business->delete();
+    $this->getJson(route('businesses.show', $this->business->slug))->assertNotFound();
+});
