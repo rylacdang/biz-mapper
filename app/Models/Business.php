@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'lng',
     'phone',
     'website',
+    'social_links',
     'cover_photo',
     'logo',
     'gallery_photos',
@@ -58,6 +59,7 @@ class Business extends Model
             'status' => BusinessStatus::class,
             'view_count' => 'integer',
             'gallery_photos' => 'array',
+            'social_links' => 'array',
         ];
     }
 

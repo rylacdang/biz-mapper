@@ -162,6 +162,16 @@ test('a failed write does not leave a newly uploaded item photo behind', functio
     expect(Storage::disk('public')->allFiles('business-offerings'))->toBe([]);
 });
 
+test('social links accept safe optional urls and reject unknown platforms and protocols', function () {
+    $url = route('owner.businesses.update', $this->business);
+    $this->actingAs($this->owner)->put($url, ['social_links' => ['facebook' => 'https://www.facebook.com/sample', 'instagram' => null]])->assertSessionHasNoErrors();
+    $this->getJson(route('businesses.show', $this->business->slug))->assertJsonPath('data.social_links.facebook', 'https://www.facebook.com/sample');
+    $this->put($url, ['social_links' => ['facebook' => 'javascript:alert(1)']])->assertSessionHasErrors('social_links.facebook');
+    $this->put($url, ['social_links' => ['unknown' => 'https://example.com']])->assertSessionHasErrors('social_links');
+    $this->put($url, ['social_links' => ['facebook' => null]])->assertSessionHasNoErrors();
+    expect($this->business->refresh()->social_links['facebook'])->toBeNull();
+});
+
 test('new catalog items appear first in the owner management list', function () {
     $latest = BusinessOffering::create(['business_id' => $this->business->id, 'type' => 'service', 'name' => 'New service']);
     $this->actingAs($this->owner)->getJson(route('owner.businesses.offerings.index', $this->business))

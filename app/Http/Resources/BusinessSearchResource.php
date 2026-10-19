@@ -21,6 +21,7 @@ class BusinessSearchResource extends JsonResource
             'hours' => $this->hours,
             'phone' => $this->phone,
             'website' => $this->website,
+            'social_links' => $this->social_links ?? [],
             'cover_photo' => $this->cover_photo,
             'logo' => $this->logo,
             'gallery_photos' => $this->gallery_photos ?? [],

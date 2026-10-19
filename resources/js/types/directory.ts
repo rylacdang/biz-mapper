@@ -37,6 +37,9 @@ export interface SearchBusiness extends Coordinates {
     address: string;
     phone?: string | null;
     website?: string | null;
+    social_links?: Partial<
+        Record<'facebook' | 'instagram' | 'tiktok', string | null>
+    >;
     cover_photo?: string | null;
     logo?: string | null;
     gallery_photos?: string[];

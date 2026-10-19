@@ -35,6 +35,8 @@ class UpdateBusinessRequest extends FormRequest
             'lat' => ['sometimes', 'numeric', 'between:-90,90'],
             'lng' => ['sometimes', 'numeric', 'between:-180,180'],
             'phone' => ['nullable', 'string', 'max:50'],
+            'social_links' => ['sometimes', 'nullable', 'array:facebook,instagram,tiktok'],
+            'social_links.*' => ['nullable', 'url:http,https', 'max:2048'],
             'website' => ['nullable', 'url', 'max:255'],
             'cover_photo' => ['nullable', 'image', 'max:5120'],
             'logo' => ['nullable', 'image', 'max:2048'],

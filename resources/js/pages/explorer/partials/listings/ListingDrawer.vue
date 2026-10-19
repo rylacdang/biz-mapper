@@ -48,6 +48,7 @@ const steps = [
     'Location',
     'Products & services',
 ];
+const socialPlatforms = ['facebook', 'instagram', 'tiktok'] as const;
 const days = [
     'monday',
     'tuesday',
@@ -82,6 +83,11 @@ const form = useForm({
     ...coordinates,
     phone: props.listing?.phone ?? '',
     website: props.listing?.website ?? '',
+    social_links: {
+        facebook: props.listing?.social_links?.facebook ?? '',
+        instagram: props.listing?.social_links?.instagram ?? '',
+        tiktok: props.listing?.social_links?.tiktok ?? '',
+    },
     cover_photo: null as File | null,
     logo: null as File | null,
     gallery: (props.listing?.gallery_photos ?? []).map((path) => ({
@@ -258,6 +264,7 @@ function validationStep(field: string): number {
 
     if (
         field.startsWith('gallery') ||
+        field.startsWith('social_links') ||
         ['cover_photo', 'logo', 'phone', 'website'].includes(field)
     ) {
         return 1;
@@ -698,6 +705,39 @@ function handleDelete() {
                         {{ form.errors.website }}
                     </p>
 
+                    <fieldset
+                        class="mt-6 space-y-4 border-t border-explorer-line pt-5"
+                    >
+                        <legend class="pt-4 text-xs font-semibold">
+                            Social links
+                            <span class="ml-1 font-normal text-slate-400"
+                                >Optional</span
+                            >
+                        </legend>
+                        <div
+                            v-for="platform in socialPlatforms"
+                            :key="platform"
+                        >
+                            <label
+                                :for="`listing-social-${platform}`"
+                                class="mb-2 block text-[11px] font-semibold capitalize"
+                                >{{ platform }}</label
+                            >
+                            <input
+                                :id="`listing-social-${platform}`"
+                                v-model="form.social_links[platform]"
+                                type="url"
+                                placeholder="https://..."
+                                class="w-full rounded-xl border border-explorer-line bg-slate-50 p-3 text-xs"
+                            />
+                            <p
+                                v-if="form.errors[`social_links.${platform}`]"
+                                class="mt-1 text-[11px] text-red-600"
+                            >
+                                {{ form.errors[`social_links.${platform}`] }}
+                            </p>
+                        </div>
+                    </fieldset>
                 </div>
 
                 <!-- Step 3: Operating hours -->
