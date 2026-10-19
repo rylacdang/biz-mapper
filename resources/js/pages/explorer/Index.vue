@@ -20,6 +20,7 @@ import type { Business, Category, Coordinates, SearchBusiness } from '@/types';
 const props = withDefaults(
     defineProps<{
         categories?: Category[];
+        offeringCurrencies?: string[];
         myBusinesses?: Business[];
         trashBusinesses?: Business[];
         canRegister?: boolean;
@@ -27,6 +28,7 @@ const props = withDefaults(
     }>(),
     {
         categories: () => [],
+        offeringCurrencies: () => [],
         myBusinesses: () => [],
         trashBusinesses: () => [],
         canRegister: false,
@@ -44,6 +46,7 @@ const {
     trashError,
     drawerOpen,
     editing,
+    drawerStep,
     handleOpenDrawer,
     handleCloseDrawer,
     handleToggleTrash,
@@ -551,6 +554,8 @@ onUnmounted(removeNavigation);
         <ListingDrawer
             v-if="drawerOpen && owner"
             :listing="editing"
+            :initial-step="drawerStep"
+            :currencies="offeringCurrencies"
             :initial-location="userLocation"
             :categories="categories"
             @close="handleCloseDrawer"

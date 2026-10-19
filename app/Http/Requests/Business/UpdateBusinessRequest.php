@@ -9,13 +9,11 @@ use Illuminate\Validation\Rule;
 class UpdateBusinessRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Authorization is handled by the controller.
      */
     public function authorize(): bool
     {
-        $business = $this->route('business');
-
-        return $business && $this->user()->can('update', $business);
+        return true;
     }
 
     /**

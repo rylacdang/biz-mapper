@@ -88,3 +88,25 @@ export interface SearchPagination {
     per_page: number;
     total: number;
 }
+
+export interface BusinessOffering {
+    id: number;
+    type: 'product' | 'service';
+    name: string;
+    description: string | null;
+    photo: string | null;
+    price: string | null;
+    price_max: string | null;
+    currency: string | null;
+    price_unit: string | null;
+}
+
+export interface OfferingPage {
+    data: BusinessOffering[];
+    meta: SearchPagination;
+}
+
+export interface BusinessOfferingDraft extends BusinessOffering {
+    file: File | null;
+    remove_photo: boolean;
+}

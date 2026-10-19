@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -37,6 +38,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Business extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Get the business's products and services.
+     */
+    public function offerings(): HasMany
+    {
+        return $this->hasMany(BusinessOffering::class);
+    }
 
     /**
      * Cast attributes

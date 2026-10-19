@@ -6,6 +6,7 @@ import { useExplorerLocation } from '@/composables/useExplorerLocation';
 import { useListingAddress } from '@/composables/useListingAddress';
 import { DEFAULT_CENTER } from '@/constants/map';
 import GalleryUpload from '@/pages/explorer/partials/listings/GalleryUpload.vue';
+import ListingOfferings from '@/pages/explorer/partials/listings/ListingOfferings.vue';
 import LocationPicker from '@/pages/explorer/partials/listings/LocationPicker.vue';
 import RequiredMark from '@/pages/explorer/partials/listings/RequiredMark.vue';
 import StreetAddressInput from '@/pages/explorer/partials/listings/StreetAddressInput.vue';
@@ -13,6 +14,7 @@ import business from '@/routes/owner/businesses';
 import type {
     AddressSuggestion,
     Business,
+    BusinessOfferingDraft,
     Category,
     Coordinates,
     GalleryPhotoDraft,
@@ -24,6 +26,8 @@ const props = defineProps<{
     listing: Business | null;
     categories: Category[];
     initialLocation?: Coordinates | null;
+    initialStep?: number;
+    currencies: string[];
 }>();
 
 const emit = defineEmits<{ close: [] }>();
@@ -31,11 +35,19 @@ const emit = defineEmits<{ close: [] }>();
 // Drawer state and step navigation
 const dialog = ref<HTMLDialogElement>();
 
-const step = ref(0);
+const step = ref(props.initialStep ?? 0);
+const catalogBusy = ref(false);
+const catalogEditing = ref(false);
 const confirming = ref(false);
 const deleting = ref(false);
 const actionError = ref('');
-const steps = ['Business', 'Photos & contact', 'Hours', 'Location'];
+const steps = [
+    'Business',
+    'Photos & contact',
+    'Hours',
+    'Location',
+    'Products & services',
+];
 const days = [
     'monday',
     'tuesday',
@@ -77,6 +89,7 @@ const form = useForm({
         file: null,
     })) as GalleryPhotoDraft[],
     replace_gallery: true,
+    offerings: [] as BusinessOfferingDraft[],
     hours: Object.fromEntries(
         days.map((day) => [
             day,
@@ -154,7 +167,10 @@ onMounted(() => {
 });
 
 // Object URLs live only as long as this drawer instance.
-onUnmounted(() => urls.forEach((url) => URL.revokeObjectURL(url)));
+onUnmounted(() => {
+    form.cancel();
+    urls.forEach((url) => URL.revokeObjectURL(url));
+});
 
 function handleUpload(event: Event, field: 'cover_photo' | 'logo') {
     const file = (event.target as HTMLInputElement).files?.[0];
@@ -181,7 +197,7 @@ function handleDialogCancel(event: Event) {
         return;
     }
 
-    if (!form.processing && !deleting.value) {
+    if (!form.processing && !deleting.value && !catalogBusy.value) {
         emit('close');
     }
 }
@@ -247,14 +263,36 @@ function validationStep(field: string): number {
         return 1;
     }
 
+    if (field.startsWith('offerings')) {
+        return 4;
+    }
+
     return field.startsWith('hours') ? 2 : 3;
 }
 
 function handleSubmit() {
+    if (catalogBusy.value || catalogEditing.value) {
+        return;
+    }
+
     form.transform((draft) => ({
         ...draft,
         lat: Number(draft.lat),
         lng: Number(draft.lng),
+        ...(saved.value
+            ? {}
+            : {
+                  offerings: draft.offerings.map((item) => ({
+                      type: item.type,
+                      name: item.name,
+                      description: item.description,
+                      photo: item.file,
+                      price: item.price,
+                      price_max: item.price_max,
+                      currency: item.currency,
+                      price_unit: item.price_unit,
+                  })),
+              }),
     }));
     // Saving is deliberately independent of address lookup; the chosen pin is authoritative.
     form.post(
@@ -307,7 +345,10 @@ function handleDelete() {
     >
         <form
             class="flex h-full flex-col"
-            @submit.prevent="step === 3 ? handleSubmit() : handleNextStep()"
+            @submit.prevent="
+                !catalogEditing &&
+                (step === 4 ? handleSubmit() : handleNextStep())
+            "
         >
             <!-- Drawer heading and close action -->
             <header
@@ -333,7 +374,7 @@ function handleDelete() {
                 <button
                     type="button"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5]"
-                    :disabled="form.processing || deleting"
+                    :disabled="form.processing || deleting || catalogBusy"
                     aria-label="Close listing form"
                     @click="emit('close')"
                 >
@@ -341,14 +382,14 @@ function handleDelete() {
                 </button>
             </header>
 
-            <!-- Four-step progress navigation -->
+            <!-- Five-step progress navigation -->
             <nav
-                class="grid grid-cols-4 gap-2 border-b border-[#edf1f6] px-5 py-4 max-md:px-3"
+                class="grid grid-cols-5 gap-2 border-b border-[#edf1f6] px-5 py-4 max-md:px-3"
                 aria-label="Listing steps"
             >
                 <button
                     :class="[
-                        'group/step flex min-w-0 flex-col items-center gap-2 border-0 bg-transparent p-0 text-[10px] md:flex-row',
+                        'group/step flex min-w-0 flex-col items-center gap-2 border-0 bg-transparent p-0 text-[10px]',
                         'text-[#a1aec0] data-[active=true]:font-[700]',
                         'data-[active=true]:text-explorer-blue',
                     ]"
@@ -358,7 +399,8 @@ function handleDelete() {
                     :data-active="step === index"
                     :data-complete="step > index"
                     :aria-current="step === index ? 'step' : undefined"
-                    @click="index < step && (step = index)"
+                    :disabled="form.processing || catalogBusy || catalogEditing"
+                    @click="(saved || index < step) && (step = index)"
                 >
                     <span
                         :class="[
@@ -370,9 +412,7 @@ function handleDelete() {
                     >
                         {{ index + 1 }}
                     </span>
-                    <span
-                        class="min-h-7 text-center leading-[14px] md:min-h-0 md:text-left"
-                    >
+                    <span class="min-h-7 text-center leading-[14px]">
                         {{ label }}
                     </span>
                 </button>
@@ -657,6 +697,7 @@ function handleDelete() {
                     >
                         {{ form.errors.website }}
                     </p>
+
                 </div>
 
                 <!-- Step 3: Operating hours -->
@@ -760,7 +801,7 @@ function handleDelete() {
                 </div>
 
                 <!-- Step 4: Address and manually chosen location -->
-                <div v-else>
+                <div v-else-if="step === 3">
                     <span
                         class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
                     >
@@ -960,6 +1001,35 @@ function handleDelete() {
                     </p>
                 </div>
 
+                <!-- Step 5: Optional catalog and inline item editor -->
+                <div v-else-if="step === 4">
+                    <span
+                        class="block text-[8px] font-[800] tracking-[1.65px] text-[#8593a8]"
+                        >05 / WHAT YOU OFFER</span
+                    >
+                    <h3 class="mx-0 my-[9px] text-[21px] tracking-[-0.6px]">
+                        Products & services
+                    </h3>
+                    <p class="mb-6 text-xs leading-6 text-[#8593a8]">
+                        Optional. Give visitors a look at what they can buy or
+                        book.
+                    </p>
+                    <ListingOfferings
+                        v-model="form.offerings"
+                        :business-id="listing?.id ?? null"
+                        :currencies="currencies"
+                        @busy="catalogBusy = $event"
+                        @editing="catalogEditing = $event"
+                    />
+                    <p
+                        v-for="(message, field) in form.errors"
+                        :key="field"
+                        class="mt-2 text-[11px] text-red-600"
+                    >
+                        {{ message }}
+                    </p>
+                </div>
+
                 <!-- Delete confirmation -->
                 <section
                     v-if="confirming"
@@ -1008,8 +1078,9 @@ function handleDelete() {
             >
                 <button
                     v-if="step > 0"
+                    :disabled="form.processing || catalogBusy || catalogEditing"
                     type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] py-3 text-[12px] font-[700] text-[#56708e]"
+                    class="inline-flex h-9 items-center justify-center gap-2 rounded-[10px] border-0 bg-[#edf2f9] px-[17px] text-[12px] font-[700] text-[#56708e]"
                     @click="step--"
                 >
                     <ArrowLeft :size="16" />
@@ -1027,13 +1098,15 @@ function handleDelete() {
                 </button>
 
                 <span v-else class="text-[11px] text-[#8a9bb1]">
-                    Step {{ step + 1 }} of 4
+                    Step {{ step + 1 }} of 5
                 </span>
 
                 <button
-                    class="inline-flex items-center justify-center gap-2 rounded-[10px] border-0 bg-explorer-blue px-[17px] py-3 text-[12px] font-[700] text-white"
+                    class="inline-flex h-9 items-center justify-center gap-2 rounded-[10px] border-0 bg-explorer-blue px-[17px] text-[12px] font-[700] text-white"
                     :disabled="
                         form.processing ||
+                        catalogBusy ||
+                        catalogEditing ||
                         deleting ||
                         matchingLocation ||
                         (step === 3 && !positionReady)
@@ -1042,10 +1115,12 @@ function handleDelete() {
                     {{
                         form.processing
                             ? 'Saving…'
-                            : step === 3
+                            : step === 4
                               ? saved
                                   ? 'Save changes'
-                                  : 'Create listing'
+                                  : form.offerings.length
+                                    ? 'Create listing'
+                                    : 'Skip & create listing'
                               : 'Continue'
                     }}
                     <ArrowRight :size="16" />

@@ -12,13 +12,18 @@ export function useOwnerWorkspace(owner: Ref<boolean>) {
     const trashError = ref('');
 
     const drawerOpen = ref(false);
+    const drawerStep = ref(0);
     const editing = ref<Business | null>(null);
 
     let previousFocus: HTMLElement | null = null;
     let focusFrame: number | undefined;
 
-    function handleOpenDrawer(listing: Business | null = null) {
+    function handleOpenDrawer(
+        listing: Business | null = null,
+        initialStep = 0,
+    ) {
         previousFocus = document.activeElement as HTMLElement;
+        drawerStep.value = initialStep;
         editing.value = listing;
         drawerOpen.value = true;
     }
@@ -85,6 +90,7 @@ export function useOwnerWorkspace(owner: Ref<boolean>) {
         trashError,
         drawerOpen,
         editing,
+        drawerStep,
         handleOpenDrawer,
         handleCloseDrawer,
         handleToggleTrash,

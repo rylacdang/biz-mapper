@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -12,7 +13,8 @@ use Throwable;
 class BusinessService
 {
     public function __construct(
-        private readonly BusinessRepositoryInterface $businessRepo
+        private readonly BusinessRepositoryInterface $businessRepo,
+        private readonly BusinessOfferingService $offeringService,
     ) {}
 
     /**
@@ -41,7 +43,8 @@ class BusinessService
             $data['user_id'] = $userId;
             $data['slug'] = $this->generateUniqueSlug($data['name']);
             $data['gallery_photos'] = $this->storeGallery($data['gallery'] ?? [], $uploads);
-            unset($data['gallery'], $data['replace_gallery']);
+            $offerings = $data['offerings'] ?? [];
+            unset($data['gallery'], $data['replace_gallery'], $data['offerings']);
 
             $data['cover_photo'] = $coverPhoto->store('covers', 'public');
             $uploads[] = $data['cover_photo'];
@@ -51,7 +54,20 @@ class BusinessService
                 $uploads[] = $data['logo'];
             }
 
-            return $this->businessRepo->create($data);
+            // Registration and its draft catalog must succeed together.
+            return DB::transaction(function () use ($data, $offerings, &$uploads) {
+                $business = $this->businessRepo->create($data);
+
+                foreach ($offerings as $draft) {
+                    $item = $this->offeringService->create($business, $draft);
+
+                    if ($item->photo) {
+                        $uploads[] = $item->photo;
+                    }
+                }
+
+                return $business;
+            });
         } catch (Throwable $exception) {
             Storage::disk('public')->delete($uploads);
 

@@ -37,6 +37,8 @@ class BusinessController extends Controller
      */
     public function update(UpdateBusinessRequest $request, Business $business): RedirectResponse
     {
+        Gate::authorize('update', $business);
+
         $this->businessService->updateBusiness($business, $request->validated(), $request->file('cover_photo'), $request->file('logo'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Listing updated successfully.')]);

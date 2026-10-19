@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Business;
 
+use App\Enums\BusinessOfferingType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -43,6 +44,16 @@ class StoreBusinessRequest extends FormRequest
             'gallery.*' => ['array:path,file'],
             'gallery.*.path' => ['nullable', 'required_without:gallery.*.file', 'prohibits:gallery.*.file', 'distinct:strict', 'string', Rule::in([])],
             'gallery.*.file' => ['nullable', 'required_without:gallery.*.path', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'offerings' => ['sometimes', 'nullable', 'array', 'max:20'],
+            'offerings.*' => ['array:type,name,description,photo,price,price_max,currency,price_unit'],
+            'offerings.*.type' => ['required', Rule::enum(BusinessOfferingType::class)],
+            'offerings.*.name' => ['required', 'string', 'max:160'],
+            'offerings.*.description' => ['nullable', 'string', 'max:2000'],
+            'offerings.*.photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'offerings.*.price' => ['nullable', 'required_with:offerings.*.price_max', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            'offerings.*.price_max' => ['nullable', 'numeric', 'decimal:0,2', 'gte:offerings.*.price', 'max:9999999999.99'],
+            'offerings.*.currency' => ['required_with:offerings.*.price', 'nullable', Rule::in(config('business.currencies'))],
+            'offerings.*.price_unit' => ['nullable', 'string', 'max:50'],
             'hours' => ['required', 'array'],
             'hours.*.open' => ['nullable', 'date_format:H:i'],
             'hours.*.close' => ['nullable', 'date_format:H:i'],

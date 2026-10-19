@@ -33,6 +33,7 @@ class ExplorerService
         }
 
         if ($user?->role === UserRole::OWNER) {
+            $data['offeringCurrencies'] = config('business.currencies');
             $data['myBusinesses'] = $this->businessRepo->getByUserIdWithCategory($user->id);
             $data['trashBusinesses'] = fn () => $this->businessRepo->getTrashedByUserIdWithCategory($user->id);
         }

@@ -8,13 +8,15 @@ import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
+import BusinessCatalog from '@/pages/businesses/partials/BusinessCatalog.vue';
 import DepthCarousel from '@/pages/businesses/partials/DepthCarousel.vue';
-import type { SearchBusiness } from '@/types';
+import type { SearchBusiness, OfferingPage } from '@/types';
 import { photoUrl } from '@/utils/businesses';
 import { searchParams } from '@/utils/search';
 
 const props = defineProps<{
     business: SearchBusiness;
+    offerings: OfferingPage;
     metadata: {
         title: string;
         description: string;
@@ -149,6 +151,8 @@ const carouselItems = computed(() =>
                     </div>
                 </div>
             </header>
+
+            <BusinessCatalog :initial="offerings" :slug="business.slug" />
 
             <!-- Gallery uploads and practical details share the same reading area. -->
             <div

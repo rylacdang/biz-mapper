@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Business\DirectionsController;
+use App\Http\Controllers\Business\OfferingController;
 use App\Http\Controllers\Business\SearchController;
 use App\Http\Controllers\Business\ShowController;
 use App\Http\Controllers\ExplorerController;
@@ -10,6 +11,7 @@ Route::get('/', ExplorerController::class)->name('explorer.index');
 
 Route::get('businesses/search', SearchController::class)->name('businesses.search');
 Route::get('businesses/{slug}/directions', DirectionsController::class)->middleware('throttle:30,1')->name('businesses.directions');
+Route::get('businesses/{business:slug}/offerings', OfferingController::class)->name('businesses.offerings.index');
 Route::get('businesses/{slug}', ShowController::class)->name('businesses.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {

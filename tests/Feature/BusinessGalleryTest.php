@@ -5,6 +5,7 @@ use App\Models\Business;
 use App\Models\Category;
 use App\Models\User;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
+use App\Services\BusinessOfferingService;
 use App\Services\BusinessService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -106,7 +107,7 @@ test('other owners cannot edit gallery photos', function () {
 test('failed updates clean new uploads and preserve original files', function () {
     $repository = Mockery::mock(BusinessRepositoryInterface::class);
     $repository->shouldReceive('update')->once()->andThrow(new RuntimeException('Save failed'));
-    $service = new BusinessService($repository);
+    $service = new BusinessService($repository, app(BusinessOfferingService::class));
 
     expect(fn () => $service->updateBusiness($this->listing, [
         'gallery' => [['file' => UploadedFile::fake()->image('new.jpg')]],

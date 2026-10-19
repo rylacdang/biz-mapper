@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\Business;
 use App\Repositories\Caching\BusinessCacheRepository;
+use App\Repositories\Contracts\BusinessOfferingRepositoryInterface;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
+use App\Repositories\Eloquents\BusinessOfferingRepository;
 use App\Repositories\Eloquents\BusinessRepository as EloquentBusinessRepository;
 use App\Repositories\Eloquents\CategoryRepository;
 use Carbon\CarbonImmutable;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
+        $this->app->bind(BusinessOfferingRepositoryInterface::class, BusinessOfferingRepository::class);
     }
 
     /**
@@ -52,13 +55,13 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Password::defaults(
-            fn(): ?Password => app()->isProduction()
+            fn (): ?Password => app()->isProduction()
                 ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
+                    ->mixedCase()
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised()
                 : null,
         );
     }
