@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Consumer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Consumer\IndexSavedBusinessesRequest;
+use App\Http\Requests\SavedBusiness\IndexSavedBusinessesRequest;
 use App\Http\Resources\BusinessProfileResource;
 use App\Models\Business;
 use App\Models\SavedBusiness;

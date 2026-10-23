@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Consumer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Consumer\CollectionPageRequest;
-use App\Http\Requests\Consumer\StoreCollectionRequest;
+use App\Http\Requests\Collection\CollectionPageRequest;
+use App\Http\Requests\Collection\SaveCollectionRequest;
 use App\Http\Resources\PlaceCollectionResource;
 use App\Http\Resources\SavedBusinessResource;
 use App\Models\PlaceCollection;
@@ -34,7 +34,7 @@ class CollectionController extends Controller
     /**
      * Create a private collection for the authenticated consumer.
      */
-    public function store(StoreCollectionRequest $request): RedirectResponse
+    public function store(SaveCollectionRequest $request): RedirectResponse
     {
         Gate::authorize('create', PlaceCollection::class);
 
@@ -60,7 +60,7 @@ class CollectionController extends Controller
     /**
      * Rename a collection without changing its ownership.
      */
-    public function update(StoreCollectionRequest $request, PlaceCollection $collection): RedirectResponse
+    public function update(SaveCollectionRequest $request, PlaceCollection $collection): RedirectResponse
     {
         Gate::authorize('update', $collection);
 

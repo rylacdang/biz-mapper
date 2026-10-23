@@ -72,6 +72,9 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
             ->delete();
     }
 
+    /**
+     * Build a query for available businesses saved by the collection owner.
+     */
     private function savedPlacesQuery(PlaceCollection $collection): Builder
     {
         return Business::query()
@@ -82,6 +85,9 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
             ->with('category');
     }
 
+    /**
+     * Paginate 20 records and return the last page if the requested page no longer exists.
+     */
     private function paginateQuery(Builder $query, int $page): LengthAwarePaginator
     {
         $results = $query->paginate(20, ['*'], 'page', $page);

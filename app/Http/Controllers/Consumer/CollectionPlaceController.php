@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Consumer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Consumer\CollectionPageRequest;
+use App\Http\Requests\Collection\CollectionPageRequest;
 use App\Http\Resources\SavedBusinessResource;
 use App\Models\PlaceCollection;
 use App\Models\SavedBusiness;

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Consumer;
+namespace App\Http\Requests\Collection;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCollectionRequest extends FormRequest
+class CollectionPageRequest extends FormRequest
 {
     /**
      * Leave authorization to the controller policy checks.
@@ -15,10 +15,12 @@ class StoreCollectionRequest extends FormRequest
     }
 
     /**
-     * Validate the name for both creation and renaming.
+     * Bound collection and saved-place pagination.
      */
     public function rules(): array
     {
-        return ['name' => ['required', 'string', 'max:80']];
+        return [
+            'page' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+        ];
     }
 }
