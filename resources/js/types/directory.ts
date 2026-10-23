@@ -31,6 +31,7 @@ export interface OpeningHours {
 // Public discovery data does not include the fields required to edit a listing.
 export interface SearchBusiness extends Coordinates {
     id: number;
+    is_saved?: boolean;
     name: string;
     slug: string;
     description: string;
@@ -120,4 +121,15 @@ export interface DiscoveryShortcut {
     label: string;
     icon: string;
     categories: string[];
+}
+
+export interface SavedPlaceChange {
+    businessId: number;
+    userId: number;
+    saved: boolean;
+}
+
+export interface SavedPlacesPage {
+    data: SearchBusiness[];
+    meta: SearchPagination;
 }

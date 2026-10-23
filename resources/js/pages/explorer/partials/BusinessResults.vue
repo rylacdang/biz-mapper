@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Store } from 'lucide-vue-next';
+import SaveBusinessButton from '@/components/businesses/SaveBusinessButton.vue';
 import type { SearchBusiness, SearchPagination } from '@/types';
 import { photoUrl } from '@/utils/businesses';
 import { formatDistance } from '@/utils/geography';
+
+const page = usePage();
 
 const props = defineProps<{
     places: SearchBusiness[];
@@ -25,73 +29,91 @@ function handlePage(offset: number) {
 <template>
     <section
         class="px-5 pb-5"
-        aria-label="Nearby business results"
+        aria-label="Business results"
         :aria-busy="loading"
     >
         <!-- Compact rows keep names, categories, and distances easy to scan. -->
         <div class="space-y-3">
-            <button
-                v-for="place in places"
-                :key="place.id"
-                type="button"
-                class="group/place flex w-full items-center gap-3 rounded-xl border border-explorer-line bg-white p-2.5 text-left transition-colors hover:bg-blue-50/40 motion-reduce:transition-none"
-                @click="emit('select', place.id)"
-            >
-                <span
-                    class="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border-2 border-explorer-line bg-explorer-cloud text-slate-300 transition-colors group-hover/place:border-explorer-blue group-focus-visible/place:border-explorer-blue motion-reduce:transition-none"
+            <article v-for="place in places" :key="place.id" class="relative">
+                <button
+                    type="button"
+                    class="group/place flex w-full items-center gap-3 rounded-xl border border-explorer-line bg-white p-2.5 text-left transition-colors hover:bg-blue-50/40 motion-reduce:transition-none"
+                    @click="emit('select', place.id)"
                 >
-                    <Store :size="24" aria-hidden="true" />
-                    <img
-                        v-if="
-                            photoUrl(place.logo) || photoUrl(place.cover_photo)
-                        "
-                        :src="
-                            photoUrl(place.logo) || photoUrl(place.cover_photo)
-                        "
-                        alt=""
-                        loading="lazy"
-                        class="absolute inset-0 h-full w-full object-cover"
-                        @error="
-                            ($event.target as HTMLImageElement).hidden = true
-                        "
-                    />
-                </span>
-                <span class="min-w-0 flex-1">
-                    <span class="flex items-center justify-between gap-2">
+                    <span
+                        class="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border-2 border-explorer-line bg-explorer-cloud text-slate-300 transition-colors group-hover/place:border-explorer-blue group-focus-visible/place:border-explorer-blue motion-reduce:transition-none"
+                    >
+                        <Store :size="24" aria-hidden="true" />
+                        <img
+                            v-if="
+                                photoUrl(place.logo) ||
+                                photoUrl(place.cover_photo)
+                            "
+                            :src="
+                                photoUrl(place.logo) ||
+                                photoUrl(place.cover_photo)
+                            "
+                            alt=""
+                            loading="lazy"
+                            class="absolute inset-0 h-full w-full object-cover"
+                            @error="
+                                ($event.target as HTMLImageElement).hidden =
+                                    true
+                            "
+                        />
+                    </span>
+                    <span class="min-w-0 flex-1">
                         <span
-                            class="min-w-0 truncate text-[13px] leading-5 font-semibold text-explorer-ink group-hover/place:text-explorer-blue"
+                            class="block truncate text-[13px] leading-5 font-semibold text-explorer-ink group-hover/place:text-explorer-blue"
+                            :class="{
+                                'pr-9': page.props.auth?.user?.role !== 'owner',
+                            }"
                         >
                             {{ place.name }}
                         </span>
                         <span
-                            v-if="place.distance !== undefined"
-                            class="shrink-0 text-[10px] font-medium text-explorer-green"
-                            :title="`${formatDistance(place.distance)} from search center`"
+                            class="mt-1 flex items-center gap-2 text-[10px] leading-4"
+                            :class="{
+                                'pr-9': page.props.auth?.user?.role !== 'owner',
+                            }"
                         >
-                            {{ formatDistance(place.distance) }}
+                            <span
+                                class="min-w-0 flex-1 truncate font-medium"
+                                :style="{
+                                    color: place.category?.color || '#2563eb',
+                                }"
+                                >{{
+                                    place.category?.name || 'Local business'
+                                }}</span
+                            >
+                        </span>
+                        <span
+                            class="mt-1 flex items-center justify-between gap-2 text-[10px] leading-4"
+                        >
+                            <span
+                                class="min-w-0 truncate text-slate-500"
+                                :title="place.address"
+                            >
+                                {{ place.address }}
+                            </span>
+
+                            <span
+                                v-if="place.distance !== undefined"
+                                class="shrink-0 font-medium text-explorer-green"
+                                :title="`${formatDistance(place.distance)} from search center`"
+                            >
+                                {{ formatDistance(place.distance) }}
+                            </span>
                         </span>
                     </span>
-                    <span
-                        class="mt-1 flex items-center gap-2 text-[10px] leading-4"
-                    >
-                        <span
-                            class="min-w-0 flex-1 truncate font-medium"
-                            :style="{
-                                color: place.category?.color || '#2563eb',
-                            }"
-                            >{{
-                                place.category?.name || 'Local business'
-                            }}</span
-                        >
-                    </span>
-                    <span
-                        class="mt-1 block truncate text-[10px] leading-4 text-slate-500"
-                        :title="place.address"
-                    >
-                        {{ place.address }}
-                    </span>
-                </span>
-            </button>
+                </button>
+                <div
+                    v-if="page.props.auth?.user?.role !== 'owner'"
+                    class="absolute top-1 right-1.5"
+                >
+                    <SaveBusinessButton :business="place" compact subtle />
+                </div>
+            </article>
         </div>
 
         <nav

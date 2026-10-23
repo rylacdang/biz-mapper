@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ChevronDown, ChevronUp, Store, X } from 'lucide-vue-next';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { Bookmark, ChevronDown, ChevronUp, Store, X } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useExplorerPanel } from '@/composables/useExplorerPanel';
 import { useExplorerSearch } from '@/composables/useExplorerSearch';
 import { useOwnerWorkspace } from '@/composables/useOwnerWorkspace';
@@ -14,12 +14,14 @@ import ExplorerSearch from '@/pages/explorer/partials/ExplorerSearch.vue';
 import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
 import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
 import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
+import SavedPlaces from '@/pages/explorer/partials/SavedPlaces.vue';
 import type {
     Business,
     Category,
     Coordinates,
     DiscoveryShortcut,
     SearchBusiness,
+    SavedPlaceChange,
 } from '@/types';
 
 // Page data and discovery state
@@ -46,6 +48,8 @@ const props = withDefaults(
 
 const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
+const consumer = computed(() => page.props.auth?.user?.role === 'consumer');
+const savedView = ref(false);
 
 const {
     workspace,
@@ -146,6 +150,13 @@ const mapCenter = ref<Coordinates>(searchState.initialCenter);
 
 // Discovery and panel actions
 async function handleSelectBusiness(id: number) {
+    if (selected.value?.id === id) {
+        panelOpen.value = true;
+
+        return;
+    }
+
+    savedView.value = false;
     workspace.value = false;
     panelOpen.value = true;
     sheet.value = 'half';
@@ -166,6 +177,8 @@ watch(panelOpen, (open) => {
 });
 
 function handleSearchNearby() {
+    savedView.value = false;
+
     if (!panelOpen.value) {
         handleOpenPanel();
     }
@@ -186,6 +199,8 @@ function handleMapMove(next: Coordinates) {
 }
 
 function handleSearchMapArea() {
+    savedView.value = false;
+
     selected.value = null;
     searchState.search();
 }
@@ -195,6 +210,7 @@ function handleLocate(location: Coordinates) {
         return;
     }
 
+    savedView.value = false;
     center.value = location;
     panelOpen.value = true;
     workspace.value = false;
@@ -211,6 +227,16 @@ function handleLocate(location: Coordinates) {
 
 function handleBackToResults() {
     selected.value = null;
+
+    if (savedView.value) {
+        void nextTick(() => {
+            panelScroll.value
+                ?.querySelector<HTMLElement>(
+                    '[aria-label="Your saved places"] h2',
+                )
+                ?.focus({ preventScroll: true });
+        });
+    }
 }
 
 function handleShowListings() {
@@ -234,6 +260,59 @@ function handleExpandSearch() {
     }
 }
 
+function handleOpenExplore() {
+    savedView.value = false;
+    handleOpenPanel();
+}
+
+function handleOpenSaved() {
+    if (!consumer.value) {
+        return;
+    }
+
+    searchState.cancelSelection();
+    handleOpenPanel();
+    savedView.value = true;
+}
+
+function handleSelectSavedBusiness(business: SearchBusiness) {
+    searchState.cancelSelection();
+    selected.value = business;
+    panelOpen.value = true;
+    sheet.value = 'half';
+}
+
+// Update existing records so switching between results and details keeps the bookmark state.
+function handleSavedChange(event: Event) {
+    const change = (event as CustomEvent<SavedPlaceChange>).detail;
+
+    if (change.userId !== page.props.auth?.user?.id) {
+        return;
+    }
+
+    for (const place of listings.value) {
+        if (place.id === change.businessId) {
+            place.is_saved = change.saved;
+        }
+    }
+
+    if (selected.value?.id === change.businessId) {
+        selected.value.is_saved = change.saved;
+    }
+}
+
+watch(
+    () => page.props.auth?.user?.id,
+    () => {
+        savedView.value = false;
+        selected.value = null;
+
+        for (const place of listings.value) {
+            place.is_saved = false;
+        }
+    },
+);
+
 // Reactive synchronization and navigation lifecycle
 watch(lastSearch, (state) => {
     // Clearing results leaves the camera at its current position.
@@ -248,6 +327,7 @@ watch(lastSearch, (state) => {
 watch(markers, (places) => {
     if (
         selected.value &&
+        !savedView.value &&
         walking.destination.value?.id !== selected.value.id &&
         !places.some((p) => p.id === selected.value!.id)
     ) {
@@ -261,6 +341,7 @@ const removeNavigation = router.on('navigate', (event) => {
 });
 
 onMounted(() => {
+    window.addEventListener('saved-place-changed', handleSavedChange);
     searchState.restore(window.location.href);
 
     if (props.directionsBusiness) {
@@ -271,7 +352,10 @@ onMounted(() => {
     }
 });
 
-onUnmounted(removeNavigation);
+onUnmounted(() => {
+    removeNavigation();
+    window.removeEventListener('saved-place-changed', handleSavedChange);
+});
 </script>
 
 <template>
@@ -316,7 +400,8 @@ onUnmounted(removeNavigation);
             :panel-open="panelOpen"
             :can-register="canRegister"
             @search="handleSearchNearby"
-            @explore="handleOpenPanel()"
+            @explore="handleOpenExplore"
+            @saved="handleOpenSaved"
             @listings="handleOpenPanel('listings')"
             @create="handleOpenDrawer()"
         />
@@ -372,7 +457,9 @@ onUnmounted(removeNavigation);
                                 ? 'Your business tools'
                                 : selected
                                   ? 'Place details'
-                                  : 'Explore nearby'
+                                  : savedView
+                                    ? 'Saved places'
+                                    : 'Explore nearby'
                         }}
                     </h1>
 
@@ -380,7 +467,9 @@ onUnmounted(removeNavigation);
                         {{
                             workspace
                                 ? 'Manage your local presence'
-                                : 'Find something worth stopping for'
+                                : savedView
+                                  ? 'Your own neighborhood favorites'
+                                  : 'Find something worth stopping for'
                         }}
                     </p>
                 </div>
@@ -426,6 +515,40 @@ onUnmounted(removeNavigation);
                 </button>
             </nav>
 
+            <nav
+                v-if="consumer"
+                class="mx-5 mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 max-md:shrink-0 max-md:group-data-[sheet=collapsed]/explorer:hidden"
+                aria-label="Explorer workspace"
+            >
+                <button
+                    type="button"
+                    :aria-pressed="!savedView"
+                    :class="[
+                        'h-9 flex-1 rounded-lg text-[11px] font-semibold',
+                        !savedView
+                            ? 'bg-white text-explorer-blue shadow-sm'
+                            : 'text-slate-500',
+                    ]"
+                    @click="handleOpenExplore"
+                >
+                    Explore
+                </button>
+
+                <button
+                    type="button"
+                    :aria-pressed="savedView"
+                    :class="[
+                        'flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[11px] font-semibold',
+                        savedView
+                            ? 'bg-white text-explorer-blue shadow-sm'
+                            : 'text-slate-500',
+                    ]"
+                    @click="handleOpenSaved"
+                >
+                    <Bookmark :size="14" /> Saved places
+                </button>
+            </nav>
+
             <div
                 ref="panelScroll"
                 :class="[
@@ -435,7 +558,7 @@ onUnmounted(removeNavigation);
             >
                 <!-- Category and radius filters -->
                 <div
-                    v-if="!workspace && !selected"
+                    v-if="!workspace && !selected && !savedView"
                     class="shrink-0 pt-2 max-md:group-data-[sheet=collapsed]/explorer:hidden"
                 >
                     <ExplorerSearch
@@ -482,6 +605,11 @@ onUnmounted(removeNavigation);
                     @directions="handleDirections"
                     @clear-route="handleClearRoute"
                     @back="handleBackToResults"
+                />
+
+                <SavedPlaces
+                    v-else-if="savedView && consumer"
+                    @select="handleSelectSavedBusiness"
                 />
 
                 <template v-else>

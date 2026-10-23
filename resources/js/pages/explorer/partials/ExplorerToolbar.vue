@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    Bookmark,
     MapPin,
     Search,
     SlidersHorizontal,
@@ -25,6 +26,7 @@ const keyword = defineModel<string>('keyword', { required: true });
 const emit = defineEmits<{
     search: [];
     explore: [];
+    saved: [];
     listings: [];
     create: [];
 }>();
@@ -43,6 +45,11 @@ function closeAccountMenu() {
 function handleOpenListings() {
     closeAccountMenu();
     emit('listings');
+}
+
+function handleOpenSaved() {
+    closeAccountMenu();
+    emit('saved');
 }
 
 function handleCreateListing() {
@@ -157,6 +164,13 @@ function handleCreateListing() {
                     Add a business
                 </button>
 
+                <button
+                    v-if="page.props.auth.user.role === 'consumer'"
+                    @click="handleOpenSaved"
+                >
+                    Saved places
+                </button>
+
                 <Link href="/settings/profile">Profile and settings</Link>
 
                 <Link :href="logout()" as="button"> Log out </Link>
@@ -198,6 +212,14 @@ function handleCreateListing() {
         >
             <Store :size="17" />
             My listings
+        </button>
+
+        <button
+            v-if="page.props.auth?.user?.role === 'consumer'"
+            class="flex h-12 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10"
+            @click="handleOpenSaved"
+        >
+            <Bookmark :size="17" class="text-explorer-blue" /> Saved places
         </button>
 
         <button

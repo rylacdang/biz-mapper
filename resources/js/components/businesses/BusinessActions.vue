@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { ArrowUpRight, Footprints, Share2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import SaveBusinessButton from '@/components/businesses/SaveBusinessButton.vue';
 import {
     Dialog,
     DialogContent,
@@ -89,6 +90,7 @@ function handleRestoreShareFocus(event: Event) {
                 <Share2 :size="15" />
                 {{ sharing ? 'Sharing…' : 'Share' }}
             </button>
+            <SaveBusinessButton :business="place" :compact="inExplorer" />
         </div>
 
         <p v-if="message" role="status" class="text-xs text-explorer-green">
