@@ -16,6 +16,7 @@ Route::get('businesses/{slug}', ShowController::class)->name('businesses.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/groups/owner.php';
+    require __DIR__.'/groups/consumer.php';
 });
 
 require __DIR__.'/settings.php';

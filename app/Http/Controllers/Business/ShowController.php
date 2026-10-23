@@ -9,6 +9,7 @@ use App\Http\Resources\BusinessProfileResource;
 use App\Repositories\Contracts\BusinessOfferingRepositoryInterface;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Services\BusinessService;
+use App\Services\SavedBusinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -19,7 +20,8 @@ class ShowController extends Controller
     public function __construct(
         private readonly BusinessService $businessService,
         private readonly BusinessRepositoryInterface $businessRepo,
-        private readonly BusinessOfferingRepositoryInterface $offeringRepo
+        private readonly BusinessOfferingRepositoryInterface $offeringRepo,
+        private readonly SavedBusinessService $savedService,
     ) {}
 
     /**
@@ -30,9 +32,10 @@ class ShowController extends Controller
         $business = $this->businessRepo->findBySlugWithCategoryOrFail($request->validated('slug'));
 
         Gate::authorize('view', $business);
+        $this->savedService->markSaved($business, $request->user());
 
         if ($request->expectsJson() && ! $request->header('X-Inertia')) {
-            return response()->json(['data' => (new BusinessProfileResource($business))->resolve($request)]);
+            return response()->json(['data' => (new BusinessProfileResource($business))->resolve($request)])->header('Cache-Control', 'private, no-store');
         }
 
         return Inertia::render('businesses/Show', [

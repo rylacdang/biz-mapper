@@ -14,6 +14,7 @@ class BusinessProfileResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_saved' => (bool) $this->getAttribute('is_saved'),
             'name' => $this->name,
             'slug' => $this->slug,
             'description' => $this->description,

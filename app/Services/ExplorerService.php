@@ -15,6 +15,7 @@ class ExplorerService
     public function __construct(
         private readonly CategoryRepositoryInterface $categoryRepo,
         private readonly BusinessRepositoryInterface $businessRepo,
+        private readonly SavedBusinessService $savedService,
     ) {}
 
     /**
@@ -36,6 +37,7 @@ class ExplorerService
 
         if ($destination) {
             $business = $this->businessRepo->findBySlugWithCategoryOrFail($destination);
+            $this->savedService->markSaved($business, $user);
             $data['directionsBusiness'] = (new BusinessProfileResource($business))->resolve();
         }
 

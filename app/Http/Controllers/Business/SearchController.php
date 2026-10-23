@@ -8,12 +8,14 @@ use App\Http\Requests\Business\SearchNearbyBusinessesRequest;
 use App\Http\Resources\BusinessMarkerResource;
 use App\Http\Resources\BusinessSearchResource;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
+use App\Services\SavedBusinessService;
 use Illuminate\Http\JsonResponse;
 
 class SearchController extends Controller
 {
     public function __construct(
-        private readonly BusinessRepositoryInterface $businessRepo
+        private readonly BusinessRepositoryInterface $businessRepo,
+        private readonly SavedBusinessService $savedService,
     ) {}
 
     /**
@@ -34,6 +36,8 @@ class SearchController extends Controller
         ];
         $results = $this->businessRepo->searchByRadius(...[...$arguments, (int) ($validated['page'] ?? 1)]);
 
+        $this->savedService->markSaved($results->getCollection(), $request->user());
+
         $payload = [
             'status' => 'success',
             'data' => BusinessSearchResource::collection($results->getCollection())->resolve($request),
@@ -51,6 +55,6 @@ class SearchController extends Controller
             )->resolve($request);
         }
 
-        return response()->json($payload);
+        return response()->json($payload)->header('Cache-Control', 'private, no-store');
     }
 }
