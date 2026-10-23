@@ -6,6 +6,8 @@ import {
     ChevronLeft,
     ChevronRight,
     FolderHeart,
+    Globe2,
+    Share2,
     LockKeyhole,
     MapPin,
     Pencil,
@@ -15,13 +17,14 @@ import {
     X,
 } from 'lucide-vue-next';
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
+import BusinessResults from '@/components/businesses/BusinessResults.vue';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
-import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
+import CollectionSharing from '@/pages/explorer/partials/CollectionSharing.vue';
 import {
     index,
     store,
@@ -66,6 +69,7 @@ const notice = ref('');
 const nameOpen = ref(false);
 const deleteOpen = ref(false);
 const pickerOpen = ref(false);
+const sharingOpen = ref(false);
 const heading = ref<HTMLElement>();
 const form = useForm({ name: '' });
 const requests = latestRequest();
@@ -112,9 +116,7 @@ async function load(target = 1) {
             places.value = result as CollectionPlacesPage;
             selected.value = {
                 ...collection,
-                name:
-                    (result as CollectionPlacesPage).collection?.name ??
-                    collection.name,
+                ...(result as CollectionPlacesPage).collection,
                 places_count: result.meta.total,
             };
             emit('change', places.value.data);
@@ -157,6 +159,15 @@ function handleName(event: MouseEvent, rename = false) {
     form.name = rename ? (selected.value?.name ?? '') : '';
     mutationError.value = '';
     nameOpen.value = true;
+}
+
+function handleSharing(event: MouseEvent) {
+    dialogTrigger = event.currentTarget as HTMLElement;
+    sharingOpen.value = true;
+}
+
+function handleSharingUpdated() {
+    void load(currentPage);
 }
 
 function handleFailure() {
@@ -389,16 +400,27 @@ onUnmounted(() => {
                     >
                         {{ selected?.name ?? 'Your collections' }}
                     </h2>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <p
+                        v-if="!selected"
+                        class="mt-1.5 text-[11px] leading-5 text-slate-500"
+                    >
+                        Group your saved places and share your favorites.
+                    </p>
+
+                    <div v-else class="mt-2 flex flex-wrap items-center gap-2">
                         <span
+                            v-if="selected"
                             class="inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-slate-100 px-1.5 text-[9px] leading-none font-medium text-slate-500"
                         >
-                            <LockKeyhole
+                            <component
+                                :is="selected?.is_public ? Globe2 : LockKeyhole"
                                 :size="10"
                                 class="shrink-0"
                                 aria-hidden="true"
                             />
-                            Private
+                            {{
+                                selected?.is_public ? 'Public link' : 'Private'
+                            }}
                         </span>
 
                         <span
@@ -421,6 +443,16 @@ onUnmounted(() => {
                     <Plus :size="14" /> New
                 </button>
                 <div v-else class="flex shrink-0 gap-1">
+                    <button
+                        type="button"
+                        :disabled="busy"
+                        aria-label="Sharing options"
+                        title="Sharing options"
+                        class="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-explorer-blue"
+                        @click="handleSharing"
+                    >
+                        <Share2 :size="14" />
+                    </button>
                     <button
                         type="button"
                         :disabled="busy"
@@ -506,7 +538,7 @@ onUnmounted(() => {
             {{ mutationError }}
         </p>
 
-        <!-- Each collection is a private, bounded list of existing saves. -->
+        <!-- Each collection contains a bounded page of the consumer's saves. -->
         <template v-if="!selected">
             <div class="space-y-2 px-5">
                 <button
@@ -532,7 +564,11 @@ onUnmounted(() => {
                                     : 'places'
                             }}</span
                         ></span
-                    ><LockKeyhole :size="13" class="shrink-0 text-slate-400" />
+                    ><component
+                        :is="collection.is_public ? Globe2 : LockKeyhole"
+                        :size="13"
+                        class="shrink-0 text-slate-400"
+                    />
                 </button>
             </div>
             <div
@@ -609,6 +645,14 @@ onUnmounted(() => {
         </div>
     </section>
 
+    <CollectionSharing
+        v-if="selected"
+        v-model:open="sharingOpen"
+        :collection="selected"
+        @updated="handleSharingUpdated"
+        @close-auto-focus="handleRestoreFocus"
+    />
+
     <!-- Small, accessible dialogs keep collection work inside the explorer. -->
     <Dialog v-model:open="nameOpen">
         <DialogContent
@@ -618,10 +662,11 @@ onUnmounted(() => {
             <DialogTitle class="font-explorer-heading text-base">{{
                 editing ? 'Rename collection' : 'New collection'
             }}</DialogTitle>
-            <DialogDescription class="text-xs leading-6 text-slate-500"
-                >Give your saved places a little plan. This collection is
-                private.</DialogDescription
-            >
+            <DialogDescription class="text-xs leading-6 text-slate-500">{{
+                editing
+                    ? 'Update the name shown for this collection.'
+                    : 'Give your saved places a little plan. New collections are private.'
+            }}</DialogDescription>
             <form class="space-y-4" @submit.prevent="handleSaveName">
                 <label for="collection-name" class="block text-xs font-semibold"
                     >Collection name <span class="text-red-500">*</span></label

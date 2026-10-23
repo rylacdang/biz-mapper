@@ -26,6 +26,7 @@ const props = defineProps<{
     moved: boolean;
     panelOpen: boolean;
     collectionFocus?: Coordinates[] | null;
+    collectionView?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -51,6 +52,12 @@ const city = useCityMap(
 const { ready, error, is3d, userMarkerElement } = city;
 
 onMounted(() => {
+    if (props.collectionView) {
+        initializeMap(props.center, true);
+
+        return;
+    }
+
     // Saved search coordinates describe the search area, not the user's location.
     if (readSearch(window.location.href)) {
         initializeMap(props.center, true);

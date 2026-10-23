@@ -13,6 +13,21 @@ interface PlaceCollectionRepositoryInterface extends BaseRepositoryInterface
     public function forUser(int $userId, int $page = 1): LengthAwarePaginator;
 
     /**
+     * Find a currently published collection by its public link token.
+     */
+    public function findPublicByTokenOrFail(string $token): PlaceCollection;
+
+    /**
+     * Lock the collection while changing its stable sharing link.
+     */
+    public function lockForSharing(int $id): PlaceCollection;
+
+    /**
+     * Paginate public business fields without private saved-record attributes.
+     */
+    public function publicPlaces(PlaceCollection $collection, int $page = 1): LengthAwarePaginator;
+
+    /**
      * Paginate the available saved places in a collection.
      */
     public function places(PlaceCollection $collection, int $page = 1): LengthAwarePaginator;

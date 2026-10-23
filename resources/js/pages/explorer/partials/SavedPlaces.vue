@@ -2,7 +2,7 @@
 import { usePage } from '@inertiajs/vue3';
 import { Bookmark, FolderHeart } from 'lucide-vue-next';
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
-import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
+import BusinessResults from '@/components/businesses/BusinessResults.vue';
 import Collections from '@/pages/explorer/partials/Collections.vue';
 import { index } from '@/routes/consumer/saved-places';
 import type {

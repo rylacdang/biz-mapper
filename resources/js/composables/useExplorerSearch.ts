@@ -261,6 +261,14 @@ export function useExplorerSearch(
         );
     }
 
+    // Stop a nearby search before switching to a shared collection.
+    function cancelSearch() {
+        requests.cancel();
+        cancelSelection();
+        loading.value = false;
+        pendingState = null;
+    }
+
     function cancelSelection() {
         selections.cancel();
         selecting.value = false;
@@ -340,6 +348,7 @@ export function useExplorerSearch(
         retry,
         findBusiness,
         cancelSelection,
+        cancelSearch,
         selecting,
         initialCenter: initialSearch ?? DEFAULT_CENTER,
     };

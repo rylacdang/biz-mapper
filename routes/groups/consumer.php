@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\Consumer\CollectionController;
 use App\Http\Controllers\Consumer\CollectionPlaceController;
+use App\Http\Controllers\Consumer\CollectionSharingController;
 use App\Http\Controllers\Consumer\SavedBusinessController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,8 @@ Route::middleware('role:'.UserRole::CONSUMER->value)->prefix('consumer')->name('
     Route::get('collections/{collection}', [CollectionController::class, 'show'])->name('collections.show');
     Route::put('collections/{collection}', [CollectionController::class, 'update'])->name('collections.update');
     Route::delete('collections/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
+
+    Route::put('collections/{collection}/sharing', CollectionSharingController::class)->name('collections.sharing.update');
 
     Route::get('collections/{collection}/saved-places', [CollectionPlaceController::class, 'index'])->name('collections.places.index');
     Route::post('collections/{collection}/places/{savedBusiness}', [CollectionPlaceController::class, 'store'])->name('collections.places.store');

@@ -31,13 +31,26 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
         );
     }
 
+    public function findPublicByTokenOrFail(string $token): PlaceCollection
+    {
+        return $this->query()->where('share_token', $token)->where('is_public', true)->firstOrFail();
+    }
+
+    public function lockForSharing(int $id): PlaceCollection
+    {
+        return $this->query()->lockForUpdate()->findOrFail($id);
+    }
+
+    public function publicPlaces(PlaceCollection $collection, int $page = 1): LengthAwarePaginator
+    {
+        return $this->paginateQuery($this->collectionPlacesQuery($collection), $page);
+    }
+
     public function places(PlaceCollection $collection, int $page = 1): LengthAwarePaginator
     {
-        $query = $this->savedPlacesQuery($collection)
-            ->join('collection_places', 'collection_places.saved_business_id', '=', 'saved_businesses.id')
-            ->where('collection_places.place_collection_id', $collection->id)
-            ->selectRaw('1 as in_collection')
-            ->orderByDesc('collection_places.id');
+        $query = $this->collectionPlacesQuery($collection)
+            ->addSelect('saved_businesses.id as saved_id')
+            ->selectRaw('1 as is_saved, 1 as in_collection');
 
         return $this->paginateQuery($query, $page);
     }
@@ -73,16 +86,36 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
     }
 
     /**
-     * Build a query for available businesses saved by the collection owner.
+     * Share the same owner and availability constraints between private and public members.
      */
-    private function savedPlacesQuery(PlaceCollection $collection): Builder
+    private function collectionPlacesQuery(PlaceCollection $collection): Builder
+    {
+        return $this->availableBusinessesQuery($collection)
+            ->join('collection_places', 'collection_places.saved_business_id', '=', 'saved_businesses.id')
+            ->where('collection_places.place_collection_id', $collection->id)
+            ->orderByDesc('collection_places.id');
+    }
+
+    /**
+     * Limit business data to the collection owner's available saves.
+     */
+    private function availableBusinessesQuery(PlaceCollection $collection): Builder
     {
         return Business::query()
             ->join('saved_businesses', 'saved_businesses.business_id', '=', 'businesses.id')
             ->where('saved_businesses.user_id', $collection->user_id)
-            ->select('businesses.*', 'saved_businesses.id as saved_id')
-            ->selectRaw('1 as is_saved')
+            ->select('businesses.*')
             ->with('category');
+    }
+
+    /**
+     * Build a query for available businesses saved by the collection owner.
+     */
+    private function savedPlacesQuery(PlaceCollection $collection): Builder
+    {
+        return $this->availableBusinessesQuery($collection)
+            ->addSelect('saved_businesses.id as saved_id')
+            ->selectRaw('1 as is_saved');
     }
 
     /**

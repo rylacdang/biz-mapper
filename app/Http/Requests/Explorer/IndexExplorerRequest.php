@@ -24,6 +24,8 @@ class IndexExplorerRequest extends FormRequest
         return [
             'shortcut' => ['sometimes', 'nullable', 'string', Rule::enum(DiscoveryShortcut::class)],
             'category' => ['sometimes', 'string', Rule::when($this->filled('shortcut'), Rule::in(['all']))],
+            'collection' => ['sometimes', 'nullable', 'uuid'],
+            'collection_page' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'destination' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }

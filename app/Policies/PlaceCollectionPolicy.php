@@ -34,6 +34,14 @@ class PlaceCollectionPolicy extends BasePolicy
     }
 
     /**
+     * Allow guests to view a collection only while it is published.
+     */
+    public function viewPublic(?User $user, PlaceCollection $collection): bool
+    {
+        return $collection->is_public;
+    }
+
+    /**
      * Allow only the owner to rename a collection.
      */
     public function update(User $user, PlaceCollection $collection): bool

@@ -2,19 +2,21 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Bookmark, ChevronDown, ChevronUp, Store, X } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import BusinessResults from '@/components/businesses/BusinessResults.vue';
 import { useExplorerPanel } from '@/composables/useExplorerPanel';
 import { useExplorerSearch } from '@/composables/useExplorerSearch';
 import { useOwnerWorkspace } from '@/composables/useOwnerWorkspace';
 import { useWalkingRoute } from '@/composables/useWalkingRoute';
 import { DEFAULT_CENTER } from '@/constants/map';
 import BusinessDetails from '@/pages/explorer/partials/BusinessDetails.vue';
-import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
 import CityMap from '@/pages/explorer/partials/CityMap.vue';
 import ExplorerSearch from '@/pages/explorer/partials/ExplorerSearch.vue';
 import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
 import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
 import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
 import SavedPlaces from '@/pages/explorer/partials/SavedPlaces.vue';
+import SharedCollection from '@/pages/explorer/partials/SharedCollection.vue';
+import { index as explorerIndex } from '@/routes/explorer';
 import type {
     Business,
     Category,
@@ -22,6 +24,8 @@ import type {
     DiscoveryShortcut,
     SearchBusiness,
     SavedPlaceChange,
+    PublicCollection,
+    PublicCollectionPlacesPage,
 } from '@/types';
 
 // Page data and discovery state
@@ -34,6 +38,8 @@ const props = withDefaults(
         trashBusinesses?: Business[];
         canRegister?: boolean;
         directionsBusiness?: SearchBusiness | null;
+        sharedCollection?: PublicCollection | null;
+        sharedPlaces?: PublicCollectionPlacesPage | null;
     }>(),
     {
         categories: () => [],
@@ -43,6 +49,8 @@ const props = withDefaults(
         trashBusinesses: () => [],
         canRegister: false,
         directionsBusiness: null,
+        sharedCollection: null,
+        sharedPlaces: null,
     },
 );
 
@@ -50,14 +58,26 @@ const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
 const consumer = computed(() => page.props.auth?.user?.role === 'consumer');
 const savedView = ref(false);
+const sharedView = ref(Boolean(props.sharedCollection));
+const sharedLoading = ref(false);
+const sharedError = ref('');
+let sharedRequestedPage = props.sharedPlaces?.meta.current_page ?? 1;
+let cancelSharedVisit: (() => void) | undefined;
 const collectionPlaces = ref<SearchBusiness[] | null>(null);
 const collectionFocus = ref<Coordinates[] | null>(null);
+const activeCollectionPlaces = computed(() =>
+    sharedView.value
+        ? (props.sharedPlaces?.data ?? [])
+        : (collectionPlaces.value ?? []),
+);
 const showingCollection = computed(
-    () => savedView.value && collectionPlaces.value !== null,
+    () =>
+        sharedView.value ||
+        (savedView.value && collectionPlaces.value !== null),
 );
 const visibleMarkers = computed(() =>
     showingCollection.value
-        ? collectionPlaces.value!.map((place) => ({
+        ? activeCollectionPlaces.value.map((place) => ({
               id: place.id,
               slug: place.slug,
               lat: place.lat,
@@ -161,13 +181,19 @@ const {
     moved,
 } = searchState;
 
-center.value = searchState.initialCenter;
-const mapCenter = ref<Coordinates>(searchState.initialCenter);
+const initialCollectionPlace = sharedView.value
+    ? props.sharedPlaces?.data[0]
+    : null;
+const initialCenter = initialCollectionPlace
+    ? { lat: initialCollectionPlace.lat, lng: initialCollectionPlace.lng }
+    : searchState.initialCenter;
+center.value = initialCenter;
+const mapCenter = ref<Coordinates>(initialCenter);
 
 // Discovery and panel actions
 async function handleSelectBusiness(id: number) {
     const collectionPlace = showingCollection.value
-        ? collectionPlaces.value?.find((place) => place.id === id)
+        ? activeCollectionPlaces.value.find((place) => place.id === id)
         : null;
 
     if (collectionPlace) {
@@ -203,6 +229,17 @@ watch(panelOpen, (open) => {
 });
 
 function handleSearchNearby() {
+    if (sharedView.value) {
+        router.get(explorerIndex.url(), {
+            ...center.value,
+            keyword: keyword.value,
+            category: category.value,
+            radius: radius.value,
+        });
+
+        return;
+    }
+
     savedView.value = false;
 
     if (!panelOpen.value) {
@@ -232,6 +269,17 @@ function handleSearchMapArea() {
 }
 
 function handleLocate(location: Coordinates) {
+    if (sharedView.value) {
+        router.get(explorerIndex.url(), {
+            ...location,
+            keyword: '',
+            category: 'all',
+            radius: radius.value,
+        });
+
+        return;
+    }
+
     if (walking.destination.value) {
         return;
     }
@@ -287,6 +335,12 @@ function handleExpandSearch() {
 }
 
 function handleOpenExplore() {
+    if (sharedView.value) {
+        router.visit(explorerIndex.url());
+
+        return;
+    }
+
     savedView.value = false;
     collectionFocus.value = null;
     collectionPlaces.value = null;
@@ -294,6 +348,23 @@ function handleOpenExplore() {
 }
 
 function handleOpenSaved() {
+    if (sharedView.value) {
+        router.get(
+            explorerIndex.url(),
+            {},
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    sharedView.value = false;
+                    handleOpenSaved();
+                },
+            },
+        );
+
+        return;
+    }
+
     if (!consumer.value) {
         return;
     }
@@ -321,6 +392,82 @@ function handleShowCollectionMap(places: SearchBusiness[]) {
     collectionFocus.value = places.map(({ lat, lng }) => ({ lat, lng }));
 }
 
+function activateSharedCollection() {
+    if (!props.sharedCollection || !props.sharedPlaces) {
+        sharedView.value = false;
+        collectionFocus.value = null;
+
+        return;
+    }
+
+    searchState.cancelSearch();
+    workspace.value = false;
+    savedView.value = false;
+    sharedView.value = true;
+    selected.value = null;
+    panelOpen.value = true;
+    sheet.value = 'half';
+    sharedError.value = '';
+    sharedRequestedPage = props.sharedPlaces.meta.current_page;
+    const first = props.sharedPlaces.data[0];
+
+    if (first) {
+        mapCenter.value = { lat: first.lat, lng: first.lng };
+        center.value = mapCenter.value;
+    }
+
+    collectionFocus.value = props.sharedPlaces.data.map(({ lat, lng }) => ({
+        lat,
+        lng,
+    }));
+}
+
+function handleSharedFailure() {
+    sharedError.value =
+        'Could not load this collection. It may no longer be public. Please try again.';
+
+    return false;
+}
+
+function handleSharedPage(page: number) {
+    if (!props.sharedCollection) {
+        return;
+    }
+
+    sharedRequestedPage = page;
+    sharedLoading.value = true;
+    sharedError.value = '';
+    router.get(
+        explorerIndex.url(),
+        {
+            collection: props.sharedCollection.share_token,
+            collection_page: page,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onCancelToken: (token) => {
+                cancelSharedVisit = () => token.cancel();
+            },
+            onError: handleSharedFailure,
+            onHttpException: handleSharedFailure,
+            onNetworkError: handleSharedFailure,
+            onFinish: () => {
+                sharedLoading.value = false;
+                cancelSharedVisit = undefined;
+            },
+        },
+    );
+}
+
+watch(
+    () => [
+        props.sharedCollection?.share_token,
+        props.sharedPlaces?.meta.current_page,
+    ],
+    activateSharedCollection,
+);
+
 // Update existing records so switching between results and details keeps the bookmark state.
 function handleSavedChange(event: Event) {
     const change = (event as CustomEvent<SavedPlaceChange>).detail;
@@ -329,7 +476,7 @@ function handleSavedChange(event: Event) {
         return;
     }
 
-    for (const place of listings.value) {
+    for (const place of [...listings.value, ...activeCollectionPlaces.value]) {
         if (place.id === change.businessId) {
             place.is_saved = change.saved;
         }
@@ -359,6 +506,7 @@ watch(lastSearch, (state) => {
     // Clearing results leaves the camera at its current position.
     if (
         state &&
+        !sharedView.value &&
         (state.lat !== mapCenter.value.lat || state.lng !== mapCenter.value.lng)
     ) {
         mapCenter.value = { lat: state.lat, lng: state.lng };
@@ -369,6 +517,7 @@ watch(markers, (places) => {
     if (
         selected.value &&
         !savedView.value &&
+        !sharedView.value &&
         walking.destination.value?.id !== selected.value.id &&
         !places.some((p) => p.id === selected.value!.id)
     ) {
@@ -378,11 +527,20 @@ watch(markers, (places) => {
 
 // Restore filters on Inertia history changes without adding another history entry.
 const removeNavigation = router.on('navigate', (event) => {
-    searchState.restore(event.detail.page.url);
+    if (!event.detail.page.props.sharedCollection) {
+        searchState.restore(event.detail.page.url);
+    }
 });
 
 onMounted(() => {
     window.addEventListener('saved-place-changed', handleSavedChange);
+
+    if (props.sharedCollection) {
+        activateSharedCollection();
+
+        return;
+    }
+
     searchState.restore(window.location.href);
 
     if (props.directionsBusiness) {
@@ -395,6 +553,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     removeNavigation();
+    cancelSharedVisit?.();
     window.removeEventListener('saved-place-changed', handleSavedChange);
 });
 </script>
@@ -424,7 +583,8 @@ onUnmounted(() => {
             :selected="selected"
             :route="walkingRoute"
             :radius="showingCollection ? null : visibleSearchArea"
-            :collection-focus="savedView ? collectionFocus : null"
+            :collection-focus="showingCollection ? collectionFocus : null"
+            :collection-view="sharedView"
             :moved="moved && !workspace && !showingCollection"
             @select="handleSelectBusiness"
             @move="handleMapMove"
@@ -436,9 +596,11 @@ onUnmounted(() => {
         <!-- Floating search, account, and owner controls -->
         <ExplorerToolbar
             v-model:keyword="keyword"
-            :count="pagination.total"
+            :count="
+                sharedView ? (sharedPlaces?.meta.total ?? 0) : pagination.total
+            "
             :loading="loading"
-            :owner="owner"
+            :owner="owner && !sharedView"
             :panel-open="panelOpen"
             :can-register="canRegister"
             @search="handleSearchNearby"
@@ -499,9 +661,11 @@ onUnmounted(() => {
                                 ? 'Your business tools'
                                 : selected
                                   ? 'Place details'
-                                  : savedView
-                                    ? 'Saved places'
-                                    : 'Explore nearby'
+                                  : sharedView
+                                    ? 'Shared collection'
+                                    : savedView
+                                      ? 'Saved places'
+                                      : 'Explore nearby'
                         }}
                     </h1>
 
@@ -509,9 +673,11 @@ onUnmounted(() => {
                         {{
                             workspace
                                 ? 'Manage your local presence'
-                                : savedView
-                                  ? 'Your own neighborhood favorites'
-                                  : 'Find something worth stopping for'
+                                : sharedView
+                                  ? 'Explore places from this shared list'
+                                  : savedView
+                                    ? 'Your own neighborhood favorites'
+                                    : 'Find something worth stopping for'
                         }}
                     </p>
                 </div>
@@ -527,7 +693,7 @@ onUnmounted(() => {
 
             <!-- Owner workspace tabs -->
             <nav
-                v-if="owner"
+                v-if="owner && !sharedView"
                 class="mx-5 mt-4 mb-0 flex gap-1 rounded-[10px] bg-[#f2f5fa] p-1 max-md:mt-[3px] max-md:shrink-0 max-md:group-data-[sheet=collapsed]/explorer:hidden"
                 aria-label="Explorer workspace"
             >
@@ -558,7 +724,7 @@ onUnmounted(() => {
             </nav>
 
             <nav
-                v-if="consumer"
+                v-if="consumer && !sharedView"
                 class="mx-5 mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 max-md:shrink-0 max-md:group-data-[sheet=collapsed]/explorer:hidden"
                 aria-label="Explorer workspace"
             >
@@ -600,7 +766,7 @@ onUnmounted(() => {
             >
                 <!-- Category and radius filters -->
                 <div
-                    v-if="!workspace && !selected && !savedView"
+                    v-if="!workspace && !selected && !savedView && !sharedView"
                     class="shrink-0 pt-2 max-md:group-data-[sheet=collapsed]/explorer:hidden"
                 >
                     <ExplorerSearch
@@ -647,6 +813,18 @@ onUnmounted(() => {
                     @directions="handleDirections"
                     @clear-route="handleClearRoute"
                     @back="handleBackToResults"
+                />
+
+                <SharedCollection
+                    v-else-if="sharedView && sharedCollection && sharedPlaces"
+                    :collection="sharedCollection"
+                    :places="sharedPlaces"
+                    :loading="sharedLoading"
+                    :error="sharedError"
+                    @select="handleSelectBusiness"
+                    @page-change="handleSharedPage"
+                    @retry="handleSharedPage(sharedRequestedPage)"
+                    @show-map="handleShowCollectionMap(sharedPlaces.data)"
                 />
 
                 <template v-else-if="!savedView">

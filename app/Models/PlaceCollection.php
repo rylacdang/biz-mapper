@@ -9,10 +9,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['user_id', 'name'])]
+#[Fillable(['user_id', 'name', 'is_public', 'share_token'])]
 #[UsePolicy(PlaceCollectionPolicy::class)]
 class PlaceCollection extends Model
 {
+    /**
+     * Keep the sharing flag a boolean in every response.
+     */
+    protected function casts(): array
+    {
+        return ['is_public' => 'boolean'];
+    }
+
     /**
      * Get the consumer who owns this collection.
      */
