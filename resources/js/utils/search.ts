@@ -10,6 +10,10 @@ export function searchParams(state: SearchState, page = 1): URLSearchParams {
         category: state.category,
     });
 
+    if (state.shortcut) {
+        params.set('shortcut', state.shortcut);
+    }
+
     if (page > 1) {
         params.set('page', String(page));
     }
@@ -46,5 +50,8 @@ export function readSearch(url: string): SearchState | null {
         radius,
         keyword: params.get('keyword') ?? '',
         category: params.get('category') ?? 'all',
+        ...(params.get('shortcut')
+            ? { shortcut: params.get('shortcut')! }
+            : {}),
     };
 }

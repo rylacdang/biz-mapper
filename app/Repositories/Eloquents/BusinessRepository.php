@@ -80,7 +80,7 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         return $record->restore();
     }
 
-    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null, int $page = 1): LengthAwarePaginator
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null, int $page = 1): LengthAwarePaginator
     {
         $query = $this->nearbyQuery($latitude, $longitude, $radius, $keyword, $category)
             ->addSelect('businesses.*')
@@ -97,7 +97,7 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         return $results;
     }
 
-    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null): Collection
     {
         return $this->nearbyQuery($latitude, $longitude, $radius, $keyword, $category)
             ->addSelect(['id', 'slug', 'lat', 'lng', 'category_id'])
@@ -108,7 +108,7 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
     /**
      * Apply the same radius, keyword, and category filters to results and map pins.
      */
-    private function nearbyQuery(float $latitude, float $longitude, float $radius, ?string $keyword, ?string $category): Builder
+    private function nearbyQuery(float $latitude, float $longitude, float $radius, ?string $keyword, string|array|null $category): Builder
     {
         $earthRadius = 6371;
         $latDelta = rad2deg($radius / $earthRadius);
@@ -135,7 +135,9 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
             $query->where(fn (Builder $q) => $q->where('name', 'like', "%{$keyword}%")->orWhere('description', 'like', "%{$keyword}%"));
         }
 
-        if ($category && $category !== 'all') {
+        if (is_array($category)) {
+            $query->whereHas('category', fn (Builder $q) => $q->whereIn('name', $category));
+        } elseif ($category && $category !== 'all') {
             $query->whereHas('category', fn (Builder $q) => $q->where('name', $category)->orWhere('id', $category));
         }
 

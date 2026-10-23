@@ -14,12 +14,19 @@ import ExplorerSearch from '@/pages/explorer/partials/ExplorerSearch.vue';
 import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
 import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
 import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
-import type { Business, Category, Coordinates, SearchBusiness } from '@/types';
+import type {
+    Business,
+    Category,
+    Coordinates,
+    DiscoveryShortcut,
+    SearchBusiness,
+} from '@/types';
 
 // Page data and discovery state
 const props = withDefaults(
     defineProps<{
         categories?: Category[];
+        discoveryShortcuts?: DiscoveryShortcut[];
         offeringCurrencies?: string[];
         myBusinesses?: Business[];
         trashBusinesses?: Business[];
@@ -28,6 +35,7 @@ const props = withDefaults(
     }>(),
     {
         categories: () => [],
+        discoveryShortcuts: () => [],
         offeringCurrencies: () => [],
         myBusinesses: () => [],
         trashBusinesses: () => [],
@@ -119,6 +127,7 @@ const searchState = useExplorerSearch(
 const {
     keyword,
     category,
+    shortcut,
     radius,
     listings,
     markers,
@@ -195,6 +204,7 @@ function handleLocate(location: Coordinates) {
         ...location,
         keyword: keyword.value,
         category: category.value,
+        shortcut: shortcut.value || undefined,
         radius: radius.value,
     });
 }
@@ -433,9 +443,12 @@ onUnmounted(removeNavigation);
                         v-model:keyword="keyword"
                         v-model:category="category"
                         v-model:radius="radius"
+                        v-model:shortcut="shortcut"
+                        :shortcuts="discoveryShortcuts"
                         :categories="categories"
                         :loading="loading"
                         @search="handleSearchNearby"
+                        @clear-shortcut="searchState.clearShortcut"
                     />
                 </div>
 

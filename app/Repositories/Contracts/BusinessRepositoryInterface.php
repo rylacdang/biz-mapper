@@ -52,10 +52,10 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
     /**
      * Search businesses inside a bounding box pre-filter sorted by Haversine distance.
      */
-    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null, int $page = 1): LengthAwarePaginator;
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null, int $page = 1): LengthAwarePaginator;
 
     /**
      * Get lightweight pins for the same nearby search.
      */
-    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection;
+    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null): Collection;
 }

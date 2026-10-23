@@ -17,6 +17,7 @@ export function useExplorerSearch(
 ) {
     const keyword = ref('');
     const category = ref('all');
+    const shortcut = ref('');
     const radius = ref(DEFAULT_SEARCH_RADIUS);
     const listings = ref<SearchBusiness[]>([]);
     const markers = ref<BusinessMarker[]>([]);
@@ -62,6 +63,7 @@ export function useExplorerSearch(
             ...center(),
             keyword: keyword.value,
             category: category.value,
+            shortcut: shortcut.value || undefined,
             radius: radius.value,
         };
         const includeMarkers =
@@ -155,9 +157,28 @@ export function useExplorerSearch(
         }
     }
 
+    function clearShortcut() {
+        shortcut.value = '';
+        const applied = searchArea.value;
+
+        if (!applied?.shortcut) {
+            return;
+        }
+
+        // Remove only the applied shortcut; other draft filters still wait for Search.
+        const target = { ...applied, shortcut: undefined };
+        void search(target, false);
+        router.replace({
+            url: `${window.location.pathname}?${searchParams(target)}`,
+            preserveScroll: true,
+            preserveState: true,
+        });
+    }
+
     function reset(updateUrl = true) {
         keyword.value = '';
         category.value = 'all';
+        shortcut.value = '';
         radius.value = DEFAULT_SEARCH_RADIUS;
         lastSearch.value = null;
         searchArea.value = null;
@@ -213,6 +234,7 @@ export function useExplorerSearch(
 
         keyword.value = state?.keyword ?? '';
         category.value = state?.category ?? 'all';
+        shortcut.value = state?.shortcut ?? '';
         radius.value = state?.radius ?? DEFAULT_SEARCH_RADIUS;
 
         if (state) {
@@ -299,6 +321,7 @@ export function useExplorerSearch(
     return {
         keyword,
         category,
+        shortcut,
         radius,
         listings,
         markers,
@@ -311,6 +334,7 @@ export function useExplorerSearch(
         moved,
         search,
         reset,
+        clearShortcut,
         restore,
         changePage,
         retry,

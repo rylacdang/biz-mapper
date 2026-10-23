@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { Search, SlidersHorizontal } from 'lucide-vue-next';
+import { Search, SlidersHorizontal, X } from 'lucide-vue-next';
 import { SliderRange, SliderRoot, SliderThumb, SliderTrack } from 'reka-ui';
+import { computed } from 'vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import CategoryPicker from '@/pages/explorer/partials/CategoryPicker.vue';
-import type { Category } from '@/types';
+import type { Category, DiscoveryShortcut } from '@/types';
+import { categoryIcon } from '@/utils/categoryIcons';
 import { formatDistance } from '@/utils/geography';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         categories: Category[];
+        shortcuts: DiscoveryShortcut[];
         loading: boolean;
         suffix?: string;
         showKeyword?: boolean;
@@ -22,7 +25,28 @@ const category = defineModel<string>('category', { required: true });
 
 const radius = defineModel<number>('radius', { required: true });
 
-const emit = defineEmits<{ search: []; reset: [] }>();
+const shortcut = defineModel<string>('shortcut', { required: true });
+
+const selectedShortcut = computed(() =>
+    props.shortcuts.find((item) => item.id === shortcut.value),
+);
+
+const emit = defineEmits<{ search: []; reset: []; clearShortcut: [] }>();
+
+function handleShortcut(id: string) {
+    const deselecting = shortcut.value === id;
+    shortcut.value = deselecting ? '' : id;
+    category.value = 'all';
+
+    if (deselecting) {
+        emit('clearShortcut');
+    }
+}
+
+function handleCategory(value: string) {
+    shortcut.value = '';
+    category.value = value;
+}
 
 function handleRadius(values: number[] | undefined) {
     if (values?.[0] !== undefined) {
@@ -60,13 +84,66 @@ function handleRadius(values: number[] | undefined) {
             </button>
         </div>
 
+        <!-- Shortcuts only prepare filters; submitting applies them to the map. -->
+        <fieldset class="mt-3 mb-4 min-w-0">
+            <legend class="mb-2 text-[11px] font-semibold text-explorer-ink">
+                What are you looking for?
+            </legend>
+            <div class="grid grid-cols-3 gap-2">
+                <button
+                    v-for="item in shortcuts"
+                    :key="item.id"
+                    type="button"
+                    :aria-pressed="shortcut === item.id"
+                    :title="item.categories.join(', ')"
+                    class="flex min-h-16 flex-col items-start justify-start gap-1.5 rounded-xl border border-explorer-line bg-white px-2.5 py-2 text-left text-[10px] leading-4 font-medium text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 aria-pressed:border-explorer-blue aria-pressed:bg-blue-50 aria-pressed:text-explorer-blue motion-reduce:transition-none"
+                    @click="handleShortcut(item.id)"
+                >
+                    <component
+                        :is="categoryIcon(item.icon)"
+                        :size="16"
+                        class="text-explorer-blue"
+                        aria-hidden="true"
+                    />
+                    {{ item.label }}
+                </button>
+            </div>
+        </fieldset>
+
+        <section
+            v-if="selectedShortcut"
+            aria-label="Included shortcut categories"
+            class="mb-4 rounded-xl bg-blue-50 px-3 py-2.5"
+        >
+            <div class="flex items-center justify-between gap-2">
+                <h3 class="text-[11px] font-semibold text-explorer-blue">
+                    Includes
+                </h3>
+                <button
+                    type="button"
+                    aria-label="Clear discovery shortcut"
+                    class="grid size-7 place-items-center rounded-md text-explorer-blue hover:bg-blue-100"
+                    @click="handleShortcut(selectedShortcut.id)"
+                >
+                    <X :size="14" />
+                </button>
+            </div>
+            <p class="mt-1 text-[10px] leading-5 text-slate-500">
+                {{ selectedShortcut.categories.join(' · ') }}
+            </p>
+        </section>
+
         <!-- Category selection -->
         <div class="mt-3 mb-4 space-y-2 max-md:mt-0 max-md:mb-3">
             <span
                 class="block text-[11px] font-semibold text-explorer-ink max-md:hidden"
                 >Category</span
             >
-            <CategoryPicker v-model="category" :categories="categories" />
+            <CategoryPicker
+                :model-value="category"
+                :categories="categories"
+                @update:model-value="handleCategory"
+            />
         </div>
 
         <!-- Radius selection -->
@@ -116,7 +193,7 @@ function handleRadius(values: number[] | undefined) {
             :id="`explorer-radius-help-${suffix}`"
             class="mt-3 text-[11px] leading-relaxed text-slate-500 max-md:sr-only"
         >
-            Apply your category and radius with Search this area.
+            Choose a shortcut or category, then apply with Search this area.
         </p>
 
         <button

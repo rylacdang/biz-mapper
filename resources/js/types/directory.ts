@@ -69,6 +69,7 @@ export interface PsgcItem {
 
 export interface SearchState extends Coordinates {
     keyword: string;
+    shortcut?: string;
     category: string;
     radius: number;
 }
@@ -112,4 +113,11 @@ export interface OfferingPage {
 export interface BusinessOfferingDraft extends BusinessOffering {
     file: File | null;
     remove_photo: boolean;
+}
+
+export interface DiscoveryShortcut {
+    id: string;
+    label: string;
+    icon: string;
+    categories: string[];
 }

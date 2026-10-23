@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DiscoveryShortcut;
 use App\Enums\UserRole;
 use App\Models\Business;
 use App\Models\Category;
@@ -161,4 +162,70 @@ test('saved pages beyond the remaining results return the last available page', 
     $this->getJson(route('businesses.search', ['lat' => 14.6, 'lng' => 121, 'radius' => 0.5, 'page' => 10]))
         ->assertOk()->assertJsonPath('meta.current_page', 1)
         ->assertJsonPath('meta.last_page', 1)->assertJsonCount(1, 'data');
+});
+
+test('discovery shortcuts expose documented category mappings to the explorer', function () {
+    $this->get(route('explorer.index'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->has('discoveryShortcuts', 3)
+        ->where('discoveryShortcuts.0.id', 'kape-muna')
+        ->where('discoveryShortcuts.0.categories', ['Coffee Shops & Cafes'])
+        ->where('discoveryShortcuts.1.categories', ['Carinderia & Eatery', 'Fast Food & Restaurant', 'Bakeries'])
+    );
+});
+
+test('shortcuts combine their categories with keyword and radius for records and pins', function (string $shortcut) {
+    $expected = [];
+    foreach (DiscoveryShortcut::from($shortcut)->categories() as $index => $name) {
+        $category = Category::create(['name' => $name, 'icon' => 'store', 'color' => '#2563eb']);
+        $business = $this->listing->replicate();
+        $business->fill(['category_id' => $category->id, 'name' => "Neighborhood {$index}", 'slug' => "shortcut-{$index}"])->save();
+        $expected[] = $business->id;
+    }
+
+    $outside = $business->replicate();
+    $outside->fill(['slug' => 'outside-shortcut', 'lat' => 15])->save();
+    $deleted = $business->replicate();
+    $deleted->fill(['slug' => 'deleted-shortcut'])->save();
+    $deleted->delete();
+    $otherKeyword = $business->replicate();
+    $otherKeyword->fill(['slug' => 'other-keyword', 'name' => 'Different name', 'description' => 'Other description'])->save();
+
+    $result = $this->getJson(route('businesses.search', [
+        'lat' => 14.6, 'lng' => 121, 'radius' => 0.5, 'keyword' => 'Neighborhood',
+        'category' => 'all', 'shortcut' => $shortcut,
+    ]))->assertOk()->assertJsonPath('meta.total', count($expected));
+
+    expect(array_column($result->json('data'), 'id'))->toEqualCanonicalizing($expected)
+        ->and(array_column($result->json('markers'), 'id'))->toEqualCanonicalizing($expected);
+})->with(['kape-muna', 'food-nearby', 'everyday-essentials']);
+
+test('shortcuts retain pagination and can be replaced by a manual category', function () {
+    $food = Category::create(['name' => 'Carinderia & Eatery', 'icon' => 'utensils', 'color' => '#2563eb']);
+    for ($index = 0; $index < 25; $index++) {
+        $business = $this->listing->replicate();
+        $business->fill(['category_id' => $food->id, 'slug' => "food-{$index}"])->save();
+    }
+    $area = ['lat' => 14.6, 'lng' => 121, 'radius' => 0.5];
+    $this->getJson(route('businesses.search', [...$area, 'shortcut' => 'food-nearby', 'page' => 2, 'include_markers' => 0]))
+        ->assertOk()->assertJsonCount(5, 'data')->assertJsonPath('meta.total', 25)
+        ->assertJsonPath('meta.current_page', 2)->assertJsonMissingPath('markers');
+    $this->getJson(route('businesses.search', [...$area, 'category' => 'Coffee']))
+        ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $this->listing->id);
+    $this->getJson(route('businesses.search', [...$area, 'category' => 'all']))
+        ->assertOk()->assertJsonPath('meta.total', 26);
+});
+
+test('unknown shortcuts and conflicting category filters are rejected', function (array $filters) {
+    $this->getJson(route('businesses.search', ['lat' => 14.6, 'lng' => 121, 'radius' => 0.5, ...$filters]))
+        ->assertUnprocessable();
+    $this->getJson(route('explorer.index', $filters))->assertUnprocessable();
+})->with([
+    [['shortcut' => 'unknown']],
+    [['shortcut' => ['food-nearby']]],
+    [['shortcut' => 'food-nearby', 'category' => 'Coffee']],
+]);
+
+test('shortcuts with missing categories return an honest empty result', function () {
+    $this->getJson(route('businesses.search', ['lat' => 14.6, 'lng' => 121, 'radius' => 0.5, 'shortcut' => 'food-nearby']))
+        ->assertOk()->assertJsonPath('meta.total', 0)->assertJsonCount(0, 'data')->assertJsonCount(0, 'markers');
 });

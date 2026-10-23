@@ -71,12 +71,12 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $restored;
     }
 
-    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null, int $page = 1): LengthAwarePaginator
+    public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null, int $page = 1): LengthAwarePaginator
     {
         return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category, $page);
     }
 
-    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, ?string $category = null): Collection
+    public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null): Collection
     {
         return $this->eloquentRepo->getNearbyMarkers($latitude, $longitude, $radius, $keyword, $category);
     }

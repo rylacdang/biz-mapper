@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DiscoveryShortcut;
 use App\Enums\UserRole;
 use App\Http\Resources\BusinessProfileResource;
 use App\Models\User;
@@ -25,6 +26,12 @@ class ExplorerService
             'canRegister' => Features::enabled(Features::registration()),
             'categories' => $this->categoryRepo->all(),
             'selectedCategory' => $category,
+            'discoveryShortcuts' => array_map(fn (DiscoveryShortcut $shortcut) => [
+                'id' => $shortcut->value,
+                'label' => $shortcut->label(),
+                'icon' => $shortcut->icon(),
+                'categories' => $shortcut->categories(),
+            ], DiscoveryShortcut::cases()),
         ];
 
         if ($destination) {

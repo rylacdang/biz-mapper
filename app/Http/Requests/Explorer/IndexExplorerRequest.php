@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Explorer;
 
+use App\Enums\DiscoveryShortcut;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexExplorerRequest extends FormRequest
 {
@@ -20,7 +22,8 @@ class IndexExplorerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category' => ['sometimes', 'string'],
+            'shortcut' => ['sometimes', 'nullable', 'string', Rule::enum(DiscoveryShortcut::class)],
+            'category' => ['sometimes', 'string', Rule::when($this->filled('shortcut'), Rule::in(['all']))],
             'destination' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Business;
 
+use App\Enums\DiscoveryShortcut;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\SearchNearbyBusinessesRequest;
 use App\Http\Resources\BusinessMarkerResource;
@@ -27,7 +28,9 @@ class SearchController extends Controller
             (float) $validated['lng'],
             (float) $validated['radius'],
             $validated['keyword'] ?? null,
-            $validated['category'] ?? null,
+            isset($validated['shortcut'])
+                ? DiscoveryShortcut::from($validated['shortcut'])->categories()
+                : ($validated['category'] ?? null),
         ];
         $results = $this->businessRepo->searchByRadius(...[...$arguments, (int) ($validated['page'] ?? 1)]);
 

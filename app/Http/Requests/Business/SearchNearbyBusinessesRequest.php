@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Business;
 
+use App\Enums\DiscoveryShortcut;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SearchNearbyBusinessesRequest extends FormRequest
 {
@@ -29,7 +31,8 @@ class SearchNearbyBusinessesRequest extends FormRequest
             'lng' => ['required', 'numeric', 'between:-180,180'],
             'radius' => ['required', 'numeric', 'min:0.1', 'max:50'],
             'keyword' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'category' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'shortcut' => ['sometimes', 'nullable', 'string', Rule::enum(DiscoveryShortcut::class)],
+            'category' => ['sometimes', 'nullable', 'string', 'max:255', Rule::when($this->filled('shortcut'), Rule::in(['all']))],
         ];
     }
 }
