@@ -77,17 +77,24 @@ watch(
                 {{ place.category?.name || 'Local business' }}
             </span>
 
-            <component
-                :is="fullPage ? 'h1' : 'h2'"
-                :class="[
-                    'font-semibold text-explorer-ink',
-                    fullPage
-                        ? 'mt-2 font-explorer-heading text-3xl tracking-tight sm:text-4xl'
-                        : 'order-1 text-[20px] leading-snug tracking-tight',
-                ]"
+            <div
+                class="flex min-w-0 items-center gap-2"
+                :class="{ 'order-1': !fullPage }"
             >
-                {{ place.name }}
-            </component>
+                <component
+                    :is="fullPage ? 'h1' : 'h2'"
+                    :class="[
+                        'min-w-0 flex-1 font-semibold break-words text-explorer-ink',
+                        fullPage
+                            ? 'mt-2 font-explorer-heading text-3xl tracking-tight sm:text-4xl'
+                            : 'text-[20px] leading-snug tracking-tight',
+                    ]"
+                >
+                    {{ place.name }}
+                </component>
+
+                <slot name="actions" />
+            </div>
         </div>
     </div>
 </template>

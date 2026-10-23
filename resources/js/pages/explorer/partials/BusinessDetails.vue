@@ -5,6 +5,12 @@ import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import WalkingDirections from '@/pages/explorer/partials/WalkingDirections.vue';
 import { show } from '@/routes/businesses';
 import type { SearchBusiness } from '@/types';
@@ -31,7 +37,32 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
             Back to places
         </button>
 
-        <BusinessIdentity :place="place" />
+        <BusinessIdentity :place="place">
+            <template #actions>
+                <TooltipProvider :delay-duration="200">
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <Link
+                                :href="show(place.slug).url"
+                                aria-label="View full profile"
+                                class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-explorer-line bg-blue-50/60 text-explorer-blue transition-colors hover:border-explorer-blue hover:bg-explorer-blue hover:text-white motion-reduce:transition-none"
+                            >
+                                <ArrowUpRight :size="17" aria-hidden="true" />
+                            </Link>
+                        </TooltipTrigger>
+
+                        <TooltipContent
+                            side="bottom"
+                            align="end"
+                            :side-offset="8"
+                            class="rounded-lg border border-white/10 bg-explorer-ink px-3 py-2 font-explorer-body text-[11px] font-medium text-white shadow-lg shadow-explorer-ink/20 motion-reduce:animate-none [&_svg]:bg-explorer-ink [&_svg]:fill-explorer-ink"
+                        >
+                            View full profile
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </template>
+        </BusinessIdentity>
 
         <p
             class="mt-3 text-[12px] leading-[1.7] whitespace-pre-line text-slate-500"
@@ -39,7 +70,7 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
             {{ place.description }}
         </p>
 
-        <!-- Visit, share, and open the full profile -->
+        <!-- Visit and share this business -->
         <div class="mt-4 space-y-3">
             <BusinessActions
                 :place="place"
@@ -54,13 +85,6 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
                 @clear="emit('clearRoute')"
                 @retry="emit('directions')"
             />
-            <Link
-                :href="show(place.slug).url"
-                class="flex h-9 items-center justify-between rounded-xl border border-explorer-line px-3 text-[11px] font-semibold text-explorer-ink hover:bg-explorer-cloud"
-            >
-                View full profile
-                <ArrowUpRight :size="15" class="text-slate-400" />
-            </Link>
         </div>
 
         <div class="mt-4 border-t border-explorer-line">
