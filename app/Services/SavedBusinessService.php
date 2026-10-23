@@ -10,23 +10,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class SavedBusinessService
 {
-    public function __construct(private readonly SavedBusinessRepositoryInterface $savedRepo) {}
-
-    /**
-     * Save the business for the authenticated consumer.
-     */
-    public function save(User $user, Business $business): void
-    {
-        $this->savedRepo->saveForUser($user->id, $business->id);
-    }
-
-    /**
-     * Remove only this consumer's saved business.
-     */
-    public function remove(User $user, Business $business): void
-    {
-        $this->savedRepo->removeForUser($user->id, $business->id);
-    }
+    public function __construct(
+        private readonly SavedBusinessRepositoryInterface $savedRepo
+    ) {}
 
     /**
      * Add private bookmark state after public records leave the cache.

@@ -8,7 +8,6 @@ use App\Http\Resources\BusinessProfileResource;
 use App\Models\Business;
 use App\Models\SavedBusiness;
 use App\Repositories\Contracts\SavedBusinessRepositoryInterface;
-use App\Services\SavedBusinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +17,6 @@ class SavedBusinessController extends Controller
 {
     public function __construct(
         private readonly SavedBusinessRepositoryInterface $savedRepo,
-        private readonly SavedBusinessService $savedService,
     ) {}
 
     /**
@@ -40,7 +38,7 @@ class SavedBusinessController extends Controller
     {
         Gate::authorize('create', [SavedBusiness::class, $business]);
 
-        $this->savedService->save($request->user(), $business);
+        $this->savedRepo->saveForUser($request->user()->id, $business->id);
 
         return back();
     }
@@ -52,7 +50,7 @@ class SavedBusinessController extends Controller
     {
         Gate::authorize('delete', [SavedBusiness::class, $business]);
 
-        $this->savedService->remove($request->user(), $business);
+        $this->savedRepo->removeForUser($request->user()->id, $business->id);
 
         return back();
     }
