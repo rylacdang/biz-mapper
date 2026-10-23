@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Consumer\CollectionController;
+use App\Http\Controllers\Consumer\CollectionPlaceController;
 use App\Http\Controllers\Consumer\SavedBusinessController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,4 +10,14 @@ Route::middleware('role:'.UserRole::CONSUMER->value)->prefix('consumer')->name('
     Route::get('saved-places', [SavedBusinessController::class, 'index'])->name('saved-places.index');
     Route::post('saved-places/{business}', [SavedBusinessController::class, 'store'])->name('saved-places.store');
     Route::delete('saved-places/{business}', [SavedBusinessController::class, 'destroy'])->withTrashed()->name('saved-places.destroy');
+
+    Route::get('collections', [CollectionController::class, 'index'])->name('collections.index');
+    Route::post('collections', [CollectionController::class, 'store'])->name('collections.store');
+    Route::get('collections/{collection}', [CollectionController::class, 'show'])->name('collections.show');
+    Route::put('collections/{collection}', [CollectionController::class, 'update'])->name('collections.update');
+    Route::delete('collections/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
+
+    Route::get('collections/{collection}/saved-places', [CollectionPlaceController::class, 'index'])->name('collections.places.index');
+    Route::post('collections/{collection}/places/{savedBusiness}', [CollectionPlaceController::class, 'store'])->name('collections.places.store');
+    Route::delete('collections/{collection}/places/{savedBusiness}', [CollectionPlaceController::class, 'destroy'])->name('collections.places.destroy');
 });

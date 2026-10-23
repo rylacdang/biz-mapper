@@ -25,6 +25,7 @@ const props = defineProps<{
     radius: SearchState | null;
     moved: boolean;
     panelOpen: boolean;
+    collectionFocus?: Coordinates[] | null;
 }>();
 
 const emit = defineEmits<{
@@ -79,6 +80,18 @@ function initializeMap(center: Coordinates, closeUp = false) {
             }
 
             city.setRoute(props.route, props.panelOpen);
+
+            if (
+                props.collectionFocus?.length &&
+                !props.selected &&
+                !props.route
+            ) {
+                city.fitPlaces(
+                    props.collectionFocus,
+                    props.panelOpen,
+                    locationError.value && window.innerWidth < 768 ? 90 : 0,
+                );
+            }
         },
         closeUp ? 18.5 : 15,
         closeUp ? 40 : undefined,
@@ -115,6 +128,19 @@ watch(
 );
 
 watch(() => props.center, city.moveCenter);
+
+watch(
+    () => props.collectionFocus,
+    (places) => {
+        if (places?.length) {
+            city.fitPlaces(
+                places,
+                props.panelOpen,
+                locationError.value && window.innerWidth < 768 ? 90 : 0,
+            );
+        }
+    },
+);
 
 watch(
     () => props.selected,

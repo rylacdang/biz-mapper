@@ -111,7 +111,9 @@ function handlePage(offset: number) {
                     v-if="page.props.auth?.user?.role !== 'owner'"
                     class="absolute top-1 right-1.5"
                 >
-                    <SaveBusinessButton :business="place" compact subtle />
+                    <slot name="action" :place="place">
+                        <SaveBusinessButton :business="place" compact subtle />
+                    </slot>
                 </div>
             </article>
         </div>

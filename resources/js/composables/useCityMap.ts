@@ -533,6 +533,39 @@ export function useCityMap(
         }
     }
 
+    // Fit the visible collection page while keeping pins clear of the explorer panel.
+    function fitPlaces(
+        places: Coordinates[],
+        panelOpen: boolean,
+        bottomInset = 0,
+    ) {
+        if (!map || !ready.value || !places.length) {
+            return;
+        }
+
+        const bounds = new maplibregl.LngLatBounds();
+
+        for (const place of places) {
+            bounds.extend([place.lng, place.lat]);
+        }
+
+        const mobile = window.innerWidth < 768;
+
+        map.fitBounds(bounds, {
+            padding: {
+                top: mobile ? 115 : 110,
+                right: mobile ? 55 : 90,
+                bottom:
+                    (mobile && panelOpen
+                        ? window.innerHeight * 0.52 + 20
+                        : 80) + bottomInset,
+                left: !mobile && panelOpen ? 390 : 40,
+            },
+            maxZoom: 18,
+            duration: reduced() ? 0 : 700,
+        });
+    }
+
     function toggle3d() {
         is3d.value = !is3d.value;
         map?.easeTo({
@@ -570,6 +603,7 @@ export function useCityMap(
         setRadius,
         setRoute,
         toggle3d,
+        fitPlaces,
         zoom: (delta: number) =>
             map?.easeTo({
                 zoom: map.getZoom() + delta,

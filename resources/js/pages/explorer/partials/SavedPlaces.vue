@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { Bookmark } from 'lucide-vue-next';
+import { Bookmark, FolderHeart } from 'lucide-vue-next';
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import BusinessResults from '@/pages/explorer/partials/BusinessResults.vue';
+import Collections from '@/pages/explorer/partials/Collections.vue';
 import { index } from '@/routes/consumer/saved-places';
 import type {
     SavedPlaceChange,
@@ -11,7 +12,21 @@ import type {
 } from '@/types';
 import { latestRequest } from '@/utils/requests';
 
-const emit = defineEmits<{ select: [business: SearchBusiness] }>();
+const emit = defineEmits<{
+    select: [business: SearchBusiness];
+    collectionChange: [places: SearchBusiness[] | null];
+    showMap: [places: SearchBusiness[]];
+}>();
+const showingCollections = ref(false);
+function handleShowSaved() {
+    showingCollections.value = false;
+    emit('collectionChange', null);
+}
+
+function handleShowCollections() {
+    showingCollections.value = true;
+}
+
 const page = usePage();
 const places = ref<SavedPlacesPage | null>(null);
 const loading = ref(false);
@@ -88,7 +103,7 @@ onUnmounted(() => {
 
 <template>
     <section class="py-5" aria-label="Your saved places" :aria-busy="loading">
-        <header class="px-5 pb-4">
+        <header v-if="!showingCollections" class="px-5 pb-4">
             <h2 ref="heading" tabindex="-1" class="text-[13px] font-semibold">
                 Saved places
                 <span
@@ -102,44 +117,87 @@ onUnmounted(() => {
                 map. Unavailable businesses are not shown.
             </p>
         </header>
-        <div
-            v-if="error"
-            role="alert"
-            class="mx-5 mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-600"
+        <nav
+            class="mx-5 mb-5 flex gap-1 border-b border-explorer-line pb-3"
+            aria-label="Saved place views"
         >
-            {{ error }}
             <button
                 type="button"
-                class="ml-1 h-9 underline"
-                @click="load(requestedPage)"
+                :aria-pressed="!showingCollections"
+                :class="[
+                    'flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[11px] font-semibold',
+                    !showingCollections
+                        ? 'bg-blue-50 text-explorer-blue'
+                        : 'text-slate-500 hover:bg-slate-50',
+                ]"
+                @click="handleShowSaved"
             >
-                Retry
+                <Bookmark :size="14" /> All saved
             </button>
-        </div>
-        <p
-            v-if="loading && !places"
-            role="status"
-            class="px-5 py-8 text-center text-xs text-slate-500"
-        >
-            Loading saved places...
-        </p>
-        <BusinessResults
-            v-else-if="places?.data.length"
-            :places="places.data"
-            :pagination="places.meta"
-            :loading="loading"
-            @select="handleSelect"
-            @page-change="load($event)"
+            <button
+                type="button"
+                :aria-pressed="showingCollections"
+                :class="[
+                    'flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[11px] font-semibold',
+                    showingCollections
+                        ? 'bg-blue-50 text-explorer-blue'
+                        : 'text-slate-500 hover:bg-slate-50',
+                ]"
+                @click="handleShowCollections"
+            >
+                <FolderHeart :size="14" /> Collections
+            </button>
+        </nav>
+
+        <Collections
+            v-if="showingCollections"
+            @select="emit('select', $event)"
+            @change="emit('collectionChange', $event)"
+            @show-map="emit('showMap', $event)"
         />
-        <div
-            v-else-if="!loading && !error"
-            class="mx-5 rounded-xl border border-dashed border-explorer-line px-5 py-10 text-center"
-        >
-            <Bookmark :size="28" class="mx-auto mb-4 text-explorer-blue" />
-            <h3 class="text-[13px] font-semibold">Keep a place for later</h3>
-            <p class="mt-2 text-[11px] leading-6 text-slate-500">
-                Tap the bookmark on a business to save it here.
+
+        <template v-else>
+            <div
+                v-if="error"
+                role="alert"
+                class="mx-5 mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-600"
+            >
+                {{ error }}
+                <button
+                    type="button"
+                    class="ml-1 h-9 underline"
+                    @click="load(requestedPage)"
+                >
+                    Retry
+                </button>
+            </div>
+            <p
+                v-if="loading && !places"
+                role="status"
+                class="px-5 py-8 text-center text-xs text-slate-500"
+            >
+                Loading saved places...
             </p>
-        </div>
+            <BusinessResults
+                v-else-if="places?.data.length"
+                :places="places.data"
+                :pagination="places.meta"
+                :loading="loading"
+                @select="handleSelect"
+                @page-change="load($event)"
+            />
+            <div
+                v-else-if="!loading && !error"
+                class="mx-5 rounded-xl border border-dashed border-explorer-line px-5 py-10 text-center"
+            >
+                <Bookmark :size="28" class="mx-auto mb-4 text-explorer-blue" />
+                <h3 class="text-[13px] font-semibold">
+                    Keep a place for later
+                </h3>
+                <p class="mt-2 text-[11px] leading-6 text-slate-500">
+                    Tap the bookmark on a business to save it here.
+                </p>
+            </div>
+        </template>
     </section>
 </template>

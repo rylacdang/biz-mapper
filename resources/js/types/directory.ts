@@ -133,3 +133,25 @@ export interface SavedPlacesPage {
     data: SearchBusiness[];
     meta: SearchPagination;
 }
+
+export interface PlaceCollection {
+    id: number;
+    name: string;
+    places_count: number;
+}
+
+export interface CollectionPlace extends SearchBusiness {
+    saved_id: number;
+    in_collection: boolean;
+}
+
+export interface CollectionsPage {
+    data: PlaceCollection[];
+    meta: SearchPagination;
+}
+
+export interface CollectionPlacesPage {
+    data: CollectionPlace[];
+    meta: SearchPagination;
+    collection?: PlaceCollection;
+}

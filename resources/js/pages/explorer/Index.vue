@@ -50,6 +50,22 @@ const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
 const consumer = computed(() => page.props.auth?.user?.role === 'consumer');
 const savedView = ref(false);
+const collectionPlaces = ref<SearchBusiness[] | null>(null);
+const collectionFocus = ref<Coordinates[] | null>(null);
+const showingCollection = computed(
+    () => savedView.value && collectionPlaces.value !== null,
+);
+const visibleMarkers = computed(() =>
+    showingCollection.value
+        ? collectionPlaces.value!.map((place) => ({
+              id: place.id,
+              slug: place.slug,
+              lat: place.lat,
+              lng: place.lng,
+              category_id: place.category?.id ?? null,
+          }))
+        : markers.value,
+);
 
 const {
     workspace,
@@ -150,6 +166,16 @@ const mapCenter = ref<Coordinates>(searchState.initialCenter);
 
 // Discovery and panel actions
 async function handleSelectBusiness(id: number) {
+    const collectionPlace = showingCollection.value
+        ? collectionPlaces.value?.find((place) => place.id === id)
+        : null;
+
+    if (collectionPlace) {
+        handleSelectSavedBusiness(collectionPlace);
+
+        return;
+    }
+
     if (selected.value?.id === id) {
         panelOpen.value = true;
 
@@ -262,6 +288,8 @@ function handleExpandSearch() {
 
 function handleOpenExplore() {
     savedView.value = false;
+    collectionFocus.value = null;
+    collectionPlaces.value = null;
     handleOpenPanel();
 }
 
@@ -280,6 +308,17 @@ function handleSelectSavedBusiness(business: SearchBusiness) {
     selected.value = business;
     panelOpen.value = true;
     sheet.value = 'half';
+}
+
+function handleCollectionChange(places: SearchBusiness[] | null) {
+    collectionPlaces.value = places;
+    collectionFocus.value = null;
+}
+
+function handleShowCollectionMap(places: SearchBusiness[]) {
+    selected.value = null;
+    sheet.value = 'half';
+    collectionFocus.value = places.map(({ lat, lng }) => ({ lat, lng }));
 }
 
 // Update existing records so switching between results and details keeps the bookmark state.
@@ -305,6 +344,8 @@ watch(
     () => page.props.auth?.user?.id,
     () => {
         savedView.value = false;
+        collectionPlaces.value = null;
+        collectionFocus.value = null;
         selected.value = null;
 
         for (const place of listings.value) {
@@ -377,13 +418,14 @@ onUnmounted(() => {
         <!-- Full-screen city map -->
         <CityMap
             :panel-open="panelOpen"
-            :places="markers"
+            :places="visibleMarkers"
             :categories="categories"
             :center="mapCenter"
             :selected="selected"
             :route="walkingRoute"
-            :radius="visibleSearchArea"
-            :moved="moved && !workspace"
+            :radius="showingCollection ? null : visibleSearchArea"
+            :collection-focus="savedView ? collectionFocus : null"
+            :moved="moved && !workspace && !showingCollection"
             @select="handleSelectBusiness"
             @move="handleMapMove"
             @search="handleSearchMapArea"
@@ -607,12 +649,7 @@ onUnmounted(() => {
                     @back="handleBackToResults"
                 />
 
-                <SavedPlaces
-                    v-else-if="savedView && consumer"
-                    @select="handleSelectSavedBusiness"
-                />
-
-                <template v-else>
+                <template v-else-if="!savedView">
                     <div
                         class="flex items-center justify-between px-[22px] pt-5 pb-[15px] max-md:px-5 max-md:pt-2 max-md:pb-[14px]"
                     >
@@ -680,6 +717,14 @@ onUnmounted(() => {
                         @page-change="searchState.changePage"
                     />
                 </template>
+
+                <SavedPlaces
+                    v-if="savedView && consumer"
+                    v-show="!selected"
+                    @select="handleSelectSavedBusiness"
+                    @collection-change="handleCollectionChange"
+                    @show-map="handleShowCollectionMap"
+                />
 
                 <p
                     v-if="trashError"
