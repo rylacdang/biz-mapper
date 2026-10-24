@@ -9,14 +9,16 @@ import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import BusinessCatalog from '@/pages/businesses/partials/BusinessCatalog.vue';
+import BusinessReviews from '@/pages/businesses/partials/BusinessReviews.vue';
 import DepthCarousel from '@/pages/businesses/partials/DepthCarousel.vue';
-import type { SearchBusiness, OfferingPage } from '@/types';
+import type { SearchBusiness, OfferingPage, BusinessFeedback } from '@/types';
 import { photoUrl } from '@/utils/businesses';
 import { searchParams } from '@/utils/search';
 
 const props = defineProps<{
     business: SearchBusiness;
     offerings: OfferingPage;
+    feedback: BusinessFeedback;
     metadata: {
         title: string;
         description: string;
@@ -194,7 +196,7 @@ const carouselItems = computed(() =>
                     >
                         <Store :size="28" />
                         <p class="text-xs">
-                            Gallery photos haven’t been added yet.
+                            Gallery photos havenâ€™t been added yet.
                         </p>
                     </div>
                 </section>
@@ -243,6 +245,7 @@ const carouselItems = computed(() =>
                     </section>
                 </div>
             </div>
+            <BusinessReviews :initial="feedback" :business="business" />
         </article>
     </main>
 </template>

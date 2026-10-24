@@ -170,3 +170,23 @@ export interface PublicCollectionPlacesPage {
     data: SearchBusiness[];
     meta: SearchPagination;
 }
+
+export interface BusinessReview {
+    id: number;
+    rating: number;
+    body: string;
+    status: 'published' | 'hidden';
+    author: string;
+    created_at: string;
+    updated_at: string;
+    can_edit: boolean;
+    reply: { body: string; created_at: string; updated_at: string } | null;
+}
+
+export interface BusinessFeedback {
+    reviews: { data: BusinessReview[]; meta: SearchPagination };
+    summary: { count: number; average: number | null };
+    own_review: BusinessReview | null;
+    can_review: boolean;
+    can_reply: boolean;
+}

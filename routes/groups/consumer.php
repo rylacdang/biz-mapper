@@ -4,10 +4,15 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Consumer\CollectionController;
 use App\Http\Controllers\Consumer\CollectionPlaceController;
 use App\Http\Controllers\Consumer\CollectionSharingController;
+use App\Http\Controllers\Consumer\ReviewController;
 use App\Http\Controllers\Consumer\SavedBusinessController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:'.UserRole::CONSUMER->value)->prefix('consumer')->name('consumer.')->group(function () {
+    Route::post('businesses/{business}/reviews', [ReviewController::class, 'store'])->middleware('throttle:20,1')->name('reviews.store');
+    Route::put('businesses/{business}/reviews/{review}', [ReviewController::class, 'update'])->scopeBindings()->name('reviews.update');
+    Route::delete('businesses/{business}/reviews/{review}', [ReviewController::class, 'destroy'])->scopeBindings()->name('reviews.destroy');
+
     Route::get('saved-places', [SavedBusinessController::class, 'index'])->name('saved-places.index');
     Route::post('saved-places/{business}', [SavedBusinessController::class, 'store'])->name('saved-places.store');
     Route::delete('saved-places/{business}', [SavedBusinessController::class, 'destroy'])->withTrashed()->name('saved-places.destroy');

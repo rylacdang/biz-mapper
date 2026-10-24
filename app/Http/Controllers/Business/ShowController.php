@@ -9,11 +9,11 @@ use App\Http\Resources\BusinessProfileResource;
 use App\Repositories\Contracts\BusinessOfferingRepositoryInterface;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Services\BusinessService;
+use App\Services\ReviewService;
 use App\Services\SavedBusinessService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
-use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response;
 
 class ShowController extends Controller
 {
@@ -22,12 +22,13 @@ class ShowController extends Controller
         private readonly BusinessRepositoryInterface $businessRepo,
         private readonly BusinessOfferingRepositoryInterface $offeringRepo,
         private readonly SavedBusinessService $savedService,
+        private readonly ReviewService $reviewService,
     ) {}
 
     /**
      * Display a shareable business profile.
      */
-    public function __invoke(ShowBusinessRequest $request): Response|JsonResponse
+    public function __invoke(ShowBusinessRequest $request): Response
     {
         $business = $this->businessRepo->findBySlugWithCategoryOrFail($request->validated('slug'));
 
@@ -40,8 +41,9 @@ class ShowController extends Controller
 
         return Inertia::render('businesses/Show', [
             'business' => (new BusinessProfileResource($business))->resolve($request),
+            'feedback' => $this->reviewService->pageData($business, $request->user()),
             'offerings' => BusinessOfferingResource::collection($this->offeringRepo->forBusiness($business->id)),
             'metadata' => $this->businessService->profileMetadata($business),
-        ]);
+        ])->toResponse($request)->header('Cache-Control', 'private, no-store');
     }
 }

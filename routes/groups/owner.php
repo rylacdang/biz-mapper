@@ -3,9 +3,13 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\Owner\BusinessController;
 use App\Http\Controllers\Owner\BusinessOfferingController;
+use App\Http\Controllers\Owner\ReviewReplyController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:'.UserRole::OWNER->value)->prefix('owner')->name('owner.')->group(function () {
+    Route::put('businesses/{business}/reviews/{review}/reply', [ReviewReplyController::class, 'update'])->scopeBindings()->name('reviews.reply.update');
+    Route::delete('businesses/{business}/reviews/{review}/reply', [ReviewReplyController::class, 'destroy'])->scopeBindings()->name('reviews.reply.destroy');
+
     Route::post('businesses', [BusinessController::class, 'store'])->name('businesses.store');
     Route::put('businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
     Route::delete('businesses/{business}', [BusinessController::class, 'destroy'])->name('businesses.destroy');

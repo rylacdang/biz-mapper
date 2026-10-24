@@ -41,6 +41,14 @@ class Business extends Model
     use SoftDeletes;
 
     /**
+     * Get this business's consumer reviews.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
      * Get the business's products and services.
      */
     public function offerings(): HasMany
