@@ -148,7 +148,7 @@ const carouselItems = computed(() =>
                             :show-cover="false"
                         />
                     </div>
-                    <div class="w-full shrink-0 lg:w-72">
+                    <div class="w-full shrink-0 lg:w-auto">
                         <BusinessActions :place="business" />
                     </div>
                 </div>

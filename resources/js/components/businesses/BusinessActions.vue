@@ -59,12 +59,12 @@ function handleRestoreShareFocus(event: Event) {
 <template>
     <!-- Actions work in both the map panel and public profile -->
     <div class="space-y-3">
-        <div class="flex flex-wrap gap-2">
+        <div class="flex items-center gap-2">
             <button
                 v-if="directionsUrl && inExplorer"
                 type="button"
                 :disabled="routing"
-                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-3 text-xs font-semibold whitespace-nowrap text-white hover:bg-blue-700 disabled:opacity-50"
                 @click="emit('directions')"
             >
                 <Footprints :size="15" />
@@ -74,7 +74,7 @@ function handleRestoreShareFocus(event: Event) {
             <Link
                 v-else-if="directionsUrl"
                 :href="directionsUrl"
-                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-4 text-xs font-semibold text-white hover:bg-blue-700"
+                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-explorer-blue px-3 text-xs font-semibold whitespace-nowrap text-white hover:bg-blue-700"
             >
                 <Footprints :size="15" />
                 Get directions
@@ -84,7 +84,7 @@ function handleRestoreShareFocus(event: Event) {
                 ref="shareButton"
                 type="button"
                 :disabled="sharing"
-                class="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-explorer-line bg-white px-4 text-xs font-semibold text-explorer-ink hover:bg-explorer-cloud disabled:opacity-50"
+                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-explorer-line bg-white px-3 text-xs font-semibold whitespace-nowrap text-explorer-ink hover:bg-explorer-cloud disabled:opacity-50"
                 @click="handleShare"
             >
                 <Share2 :size="15" />
