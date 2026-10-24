@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\ReviewStatus;
+use App\Observers\ReviewObserver;
 use App\Policies\ReviewPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['business_id', 'user_id', 'rating', 'body', 'status'])]
 #[UsePolicy(ReviewPolicy::class)]
+#[ObservedBy([ReviewObserver::class])]
 class Review extends Model
 {
     /**
@@ -21,7 +24,7 @@ class Review extends Model
     {
         return [
             'rating' => 'integer',
-            'status' => ReviewStatus::class
+            'status' => ReviewStatus::class,
         ];
     }
 

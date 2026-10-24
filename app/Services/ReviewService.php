@@ -10,6 +10,7 @@ use App\Models\Review;
 use App\Models\User;
 use App\Repositories\Contracts\ReviewRepositoryInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ReviewService
@@ -41,15 +42,41 @@ class ReviewService
     public function create(Business $business, User $user, array $data): Review
     {
         try {
-            return $this->reviewRepo->create([
-                'business_id' => $business->id,
-                'user_id' => $user->id,
-                'rating' => $data['rating'],
-                'body' => $data['body'],
-                'status' => ReviewStatus::PUBLISHED,
-            ]);
+            return DB::transaction(function () use ($business, $user, $data) {
+                $this->reviewRepo->lockBusiness($business->id);
+
+                return $this->reviewRepo->create([
+                    'business_id' => $business->id,
+                    'user_id' => $user->id,
+                    'rating' => $data['rating'],
+                    'body' => $data['body'],
+                    'status' => ReviewStatus::PUBLISHED,
+                ]);
+            });
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['body' => 'You already reviewed this business. Edit your existing review instead.']);
         }
+    }
+
+    /**
+     * Update the review and invalidate its summary atomically.
+     */
+    public function update(Review $review, array $data): void
+    {
+        DB::transaction(function () use ($review, $data) {
+            $this->reviewRepo->lockBusiness($review->business_id);
+            $this->reviewRepo->update($review->id, $data);
+        });
+    }
+
+    /**
+     * Delete the review and invalidate its summary atomically.
+     */
+    public function delete(Review $review): void
+    {
+        DB::transaction(function () use ($review) {
+            $this->reviewRepo->lockBusiness($review->business_id);
+            $this->reviewRepo->delete($review->id);
+        });
     }
 }

@@ -31,4 +31,9 @@ interface ReviewRepositoryInterface extends BaseRepositoryInterface
      * Remove a review's reply.
      */
     public function deleteReply(int $reviewId): void;
+
+    /**
+     * Serialize review changes with summary publication.
+     */
+    public function lockBusiness(int $businessId): void;
 }

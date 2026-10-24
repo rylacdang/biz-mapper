@@ -5,6 +5,7 @@ import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
+import BusinessReviewSummary from '@/components/businesses/BusinessReviewSummary.vue';
 import {
     Tooltip,
     TooltipContent,
@@ -69,6 +70,12 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
         >
             {{ place.description }}
         </p>
+
+        <BusinessReviewSummary
+            :business-slug="place.slug"
+            show-reviews-link
+            class="mt-4"
+        />
 
         <!-- Visit and share this business -->
         <div class="mt-4 space-y-3">

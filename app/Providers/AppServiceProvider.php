@@ -9,12 +9,14 @@ use App\Repositories\Contracts\BusinessRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\PlaceCollectionRepositoryInterface;
 use App\Repositories\Contracts\ReviewRepositoryInterface;
+use App\Repositories\Contracts\ReviewSummaryRepositoryInterface;
 use App\Repositories\Contracts\SavedBusinessRepositoryInterface;
 use App\Repositories\Eloquents\BusinessOfferingRepository;
 use App\Repositories\Eloquents\BusinessRepository as EloquentBusinessRepository;
 use App\Repositories\Eloquents\CategoryRepository;
 use App\Repositories\Eloquents\PlaceCollectionRepository;
 use App\Repositories\Eloquents\ReviewRepository;
+use App\Repositories\Eloquents\ReviewSummaryRepository;
 use App\Repositories\Eloquents\SavedBusinessRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -37,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
             return new BusinessCacheRepository($eloquentRepo);
         });
 
+        $this->app->bind(ReviewSummaryRepositoryInterface::class, ReviewSummaryRepository::class);
         $this->app->bind(ReviewRepositoryInterface::class, ReviewRepository::class);
         $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
         $this->app->bind(PlaceCollectionRepositoryInterface::class, PlaceCollectionRepository::class);

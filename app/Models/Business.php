@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use App\Enums\BusinessStatus;
+use App\Observers\BusinessSummaryObserver;
 use App\Policies\BusinessPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -36,9 +39,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'barangay_code',
 ])]
 #[UsePolicy(BusinessPolicy::class)]
+#[ObservedBy([BusinessSummaryObserver::class])]
 class Business extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Get the current generated review summary.
+     */
+    public function reviewSummary(): HasOne
+    {
+        return $this->hasOne(ReviewSummary::class);
+    }
 
     /**
      * Get this business's consumer reviews.

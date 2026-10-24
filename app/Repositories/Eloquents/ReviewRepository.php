@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquents;
 
 use App\Enums\ReviewStatus;
+use App\Models\Business;
 use App\Models\Review;
 use App\Models\ReviewReply;
 use App\Repositories\Contracts\ReviewRepositoryInterface;
@@ -13,6 +14,11 @@ class ReviewRepository extends BaseRepository implements ReviewRepositoryInterfa
     public function __construct(Review $review)
     {
         parent::__construct($review);
+    }
+
+    public function lockBusiness(int $businessId): void
+    {
+        Business::withTrashed()->lockForUpdate()->findOrFail($businessId);
     }
 
     public function forBusiness(int $businessId, int $page = 1): LengthAwarePaginator

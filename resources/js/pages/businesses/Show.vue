@@ -7,6 +7,7 @@ import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
+import BusinessReviewSummary from '@/components/businesses/BusinessReviewSummary.vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import BusinessCatalog from '@/pages/businesses/partials/BusinessCatalog.vue';
 import BusinessReviews from '@/pages/businesses/partials/BusinessReviews.vue';
@@ -245,6 +246,11 @@ const carouselItems = computed(() =>
                     </section>
                 </div>
             </div>
+            <BusinessReviewSummary
+                :business-slug="business.slug"
+                :refresh-key="feedback"
+                class="mt-8"
+            />
             <BusinessReviews :initial="feedback" :business="business" />
         </article>
     </main>

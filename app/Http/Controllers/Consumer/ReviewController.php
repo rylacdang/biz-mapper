@@ -6,15 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Review\SaveReviewRequest;
 use App\Models\Business;
 use App\Models\Review;
-use App\Repositories\Contracts\ReviewRepositoryInterface;
 use App\Services\ReviewService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
 class ReviewController extends Controller
 {
+    /**
+     * Use the review service for transactional review changes.
+     */
     public function __construct(
-        private readonly ReviewRepositoryInterface $reviewRepo,
         private readonly ReviewService $reviewService,
     ) {}
 
@@ -37,7 +38,7 @@ class ReviewController extends Controller
     {
         Gate::authorize('update', $review);
 
-        $this->reviewRepo->update($review->id, $request->validated());
+        $this->reviewService->update($review, $request->validated());
 
         return to_route('businesses.show', $business->slug);
     }
@@ -49,7 +50,7 @@ class ReviewController extends Controller
     {
         Gate::authorize('delete', $review);
 
-        $this->reviewRepo->delete($review->id);
+        $this->reviewService->delete($review);
 
         return to_route('businesses.show', $business->slug);
     }

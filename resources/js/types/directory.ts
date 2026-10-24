@@ -190,3 +190,16 @@ export interface BusinessFeedback {
     can_review: boolean;
     can_reply: boolean;
 }
+
+export interface ReviewSummary {
+    status:
+        | 'insufficient_reviews'
+        | 'pending'
+        | 'generating'
+        | 'ready'
+        | 'unavailable';
+    text: string | null;
+    generated_at: string | null;
+    review_count: number;
+    sampled_review_count: number;
+}
