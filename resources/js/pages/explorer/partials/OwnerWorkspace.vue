@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Plus, Pencil, Trash2, RotateCcw, Store } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
+import { Plus, Pencil, Trash2, RotateCcw, Store, Eye } from 'lucide-vue-next';
+import { show } from '@/routes/businesses';
 import type { Business } from '@/types';
 import { photoUrl } from '@/utils/businesses';
 
@@ -62,49 +64,64 @@ const emit = defineEmits<{
                 :key="place.id"
                 class="flex items-center gap-3 border-b border-[#edf1f6] px-0 py-4"
             >
-                <img
-                    class="h-15 w-14 rounded-[9px] object-cover"
-                    v-if="photoUrl(place.cover_photo)"
-                    :src="photoUrl(place.cover_photo)"
-                    :alt="place.name"
-                />
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <img
+                        class="h-15 w-14 shrink-0 rounded-[9px] object-cover"
+                        v-if="photoUrl(place.cover_photo)"
+                        :src="photoUrl(place.cover_photo)"
+                        :alt="place.name"
+                    />
 
-                <Store v-else :size="28" />
+                    <Store v-else :size="28" />
 
-                <div class="min-w-0 flex-1">
-                    <h3 class="m-0 text-[11px]">{{ place.name }}</h3>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="m-0 truncate text-[11px]">
+                            {{ place.name }}
+                        </h3>
 
-                    <p class="mx-0 my-[3px] text-[10px] text-[#8e9bb0]">
-                        {{ place.category?.name }}
-                    </p>
+                        <p class="mx-0 my-[3px] text-[10px] text-[#8e9bb0]">
+                            {{ place.category?.name }}
+                        </p>
 
-                    <span
-                        class="rounded-[4px] bg-[#eff5ff] px-[6px] py-[2px] text-[9px] text-[#6589c4]"
-                    >
-                        {{
-                            showingTrash
-                                ? 'Deleted'
-                                : place.status === 'active'
-                                  ? 'Active'
-                                  : 'Pending'
-                        }}
-                    </span>
+                        <span
+                            class="rounded-[4px] bg-[#eff5ff] px-[6px] py-[2px] text-[9px] text-[#6589c4]"
+                        >
+                            {{
+                                showingTrash
+                                    ? 'Deleted'
+                                    : place.status === 'active'
+                                      ? 'Active'
+                                      : 'Pending'
+                            }}
+                        </span>
+                    </div>
                 </div>
 
-                <button
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5]"
-                    :disabled="busy"
-                    :aria-label="`${showingTrash ? 'Restore' : 'Edit'} ${place.name}`"
-                    @click="
-                        showingTrash
-                            ? emit('restore', place.id)
-                            : emit('edit', place)
-                    "
-                >
-                    <RotateCcw v-if="showingTrash" :size="18" />
+                <div class="flex shrink-0 items-center gap-1">
+                    <Link
+                        v-if="!showingTrash"
+                        :href="show(place.slug).url"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[#768ba5] transition-colors hover:bg-[#f3f6fb] hover:text-explorer-blue focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-explorer-blue"
+                        :aria-label="`View ${place.name} business profile`"
+                        title="View business profile"
+                    >
+                        <Eye :size="18" aria-hidden="true" />
+                    </Link>
+                    <button
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-transparent text-[#768ba5] transition-colors hover:bg-[#f3f6fb] hover:text-explorer-blue focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-explorer-blue"
+                        :disabled="busy"
+                        :aria-label="`${showingTrash ? 'Restore' : 'Edit'} ${place.name}`"
+                        @click="
+                            showingTrash
+                                ? emit('restore', place.id)
+                                : emit('edit', place)
+                        "
+                    >
+                        <RotateCcw v-if="showingTrash" :size="18" />
 
-                    <Pencil v-else :size="18" />
-                </button>
+                        <Pencil v-else :size="18" />
+                    </button>
+                </div>
             </article>
         </div>
 
