@@ -8,6 +8,7 @@ use App\Http\Controllers\Business\SearchController;
 use App\Http\Controllers\Business\ShowController;
 use App\Http\Controllers\Collection\ShowController as CollectionShowController;
 use App\Http\Controllers\ExplorerController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', ExplorerController::class)->name('explorer.index');
@@ -21,6 +22,10 @@ Route::get('businesses/{business:slug}/review-summary', ReviewSummaryController:
 Route::get('businesses/{slug}', ShowController::class)->name('businesses.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index'])->middleware('throttle:60,1')->name('notifications.index');
+    Route::put('notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
+    Route::put('notifications/{notification}/read', [NotificationController::class, 'markRead'])->where('notification', '(review|reply)-[1-9][0-9]*')->middleware('throttle:60,1')->name('notifications.read');
+
     require __DIR__.'/groups/owner.php';
     require __DIR__.'/groups/consumer.php';
 });

@@ -22,6 +22,7 @@ class ShowBusinessRequest extends FormRequest
     {
         return [
             'slug' => ['required', 'string', 'max:255'],
+            'review' => ['sometimes', 'integer', 'min:1'],
         ];
     }
 
@@ -31,6 +32,7 @@ class ShowBusinessRequest extends FormRequest
     public function validationData(): array
     {
         return [
+            ...$this->query(),
             'slug' => $this->route('slug'),
         ];
     }

@@ -47,7 +47,7 @@ class ShowController extends Controller
 
         return Inertia::render('businesses/Show', [
             'business' => (new BusinessProfileResource($business))->resolve($request),
-            'feedback' => $this->reviewService->pageData($business, $request->user()),
+            'feedback' => $this->reviewService->pageData($business, $request->user(), reviewId: $request->has('review') ? (int) $request->validated('review') : null),
             'offerings' => BusinessOfferingResource::collection($this->offeringRepo->forBusiness($business->id)),
             'metadata' => $this->businessService->profileMetadata($business),
         ])->toResponse($request)->header('Cache-Control', 'private, no-store');

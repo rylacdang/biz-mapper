@@ -33,6 +33,11 @@ interface ReviewRepositoryInterface extends BaseRepositoryInterface
     public function deleteReply(int $reviewId): void;
 
     /**
+     * Find which public review page contains a notification target.
+     */
+    public function pageForReview(int $businessId, int $reviewId): int;
+
+    /**
      * Serialize review changes with summary publication.
      */
     public function lockBusiness(int $businessId): void;

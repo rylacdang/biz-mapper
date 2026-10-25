@@ -11,6 +11,7 @@ import {
     List,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import NotificationBell from '@/components/NotificationBell.vue';
 import { login, logout, register } from '@/routes';
 
 defineProps<{
@@ -88,8 +89,11 @@ function handleCreateListing() {
     <form
         :class="[
             'absolute top-4 left-[200px] z-5 flex h-12 w-[360px] items-center gap-2 rounded-2xl border',
-            'border-white bg-white p-1.5 pl-3.5 shadow-lg shadow-explorer-ink/10 max-md:right-[64px]',
+            'border-white bg-white p-1.5 pl-3.5 shadow-lg shadow-explorer-ink/10',
             'max-md:left-[64px] max-md:w-auto',
+            page.props.auth?.user
+                ? 'max-md:right-[112px]'
+                : 'max-md:right-[64px]',
         ]"
         aria-label="Find local businesses"
         @submit.prevent="emit('search')"
@@ -123,68 +127,70 @@ function handleCreateListing() {
     </form>
 
     <!-- Account and owner actions -->
-    <details
-        ref="accountMenu"
-        class="absolute top-4 right-4 z-6 max-md:right-3"
+    <div
+        class="absolute top-4 right-4 z-6 flex h-12 items-center gap-3 max-md:right-3"
     >
-        <summary
-            aria-label="Account menu"
-            :class="[
-                'flex h-12 cursor-pointer list-none items-center gap-2 rounded-2xl bg-white px-3.5 text-xs',
-                'font-semibold shadow-lg shadow-explorer-ink/10 max-md:w-11 max-md:justify-center',
-                'max-md:px-0 [&::-webkit-details-marker]:hidden',
-            ]"
-        >
-            <UserRound :size="18" />
+        <NotificationBell />
+        <details ref="accountMenu" class="relative">
+            <summary
+                aria-label="Account menu"
+                :class="[
+                    'flex h-12 cursor-pointer list-none items-center gap-2 rounded-2xl bg-white px-3.5 text-xs',
+                    'font-semibold shadow-lg shadow-explorer-ink/10 max-md:w-11 max-md:justify-center',
+                    'max-md:px-0 [&::-webkit-details-marker]:hidden',
+                ]"
+            >
+                <UserRound :size="18" />
 
-            <span class="max-md:hidden">
-                {{ page.props.auth?.user ? 'My account' : 'Account' }}
-            </span>
-        </summary>
+                <span class="max-md:hidden">
+                    {{ page.props.auth?.user ? 'My account' : 'Account' }}
+                </span>
+            </summary>
 
-        <nav
-            aria-label="Account actions"
-            :class="[
-                'absolute top-14 right-0 flex w-52 flex-col gap-1 rounded-2xl border border-slate-100',
-                'bg-white p-2 text-xs shadow-xl shadow-explorer-ink/15 [&_a]:rounded-xl [&_a]:px-3',
-                '[&_a]:py-3 [&_a:hover]:bg-slate-50 [&_button]:rounded-xl [&_button]:px-3 [&_button]:py-3',
-                '[&_button]:text-left [&_button:hover]:bg-slate-50',
-            ]"
-        >
-            <template v-if="page.props.auth?.user">
-                <p class="px-3 py-2 text-slate-400">
-                    {{ page.props.auth.user.name }}
-                </p>
+            <nav
+                aria-label="Account actions"
+                :class="[
+                    'absolute top-14 right-0 flex w-52 flex-col gap-1 rounded-2xl border border-slate-100',
+                    'bg-white p-2 text-xs shadow-xl shadow-explorer-ink/15 [&_a]:rounded-xl [&_a]:px-3',
+                    '[&_a]:py-3 [&_a:hover]:bg-slate-50 [&_button]:rounded-xl [&_button]:px-3 [&_button]:py-3',
+                    '[&_button]:text-left [&_button:hover]:bg-slate-50',
+                ]"
+            >
+                <template v-if="page.props.auth?.user">
+                    <p class="px-3 py-2 text-slate-400">
+                        {{ page.props.auth.user.name }}
+                    </p>
 
-                <button v-if="owner" @click="handleOpenListings">
-                    My listings
-                </button>
+                    <button v-if="owner" @click="handleOpenListings">
+                        My listings
+                    </button>
 
-                <button v-if="owner" @click="handleCreateListing">
-                    Add a business
-                </button>
+                    <button v-if="owner" @click="handleCreateListing">
+                        Add a business
+                    </button>
 
-                <button
-                    v-if="page.props.auth.user.role === 'consumer'"
-                    @click="handleOpenSaved"
-                >
-                    Saved places
-                </button>
+                    <button
+                        v-if="page.props.auth.user.role === 'consumer'"
+                        @click="handleOpenSaved"
+                    >
+                        Saved places
+                    </button>
 
-                <Link href="/settings/profile">Profile and settings</Link>
+                    <Link href="/settings/profile">Profile and settings</Link>
 
-                <Link :href="logout()" as="button"> Log out </Link>
-            </template>
+                    <Link :href="logout()" as="button"> Log out </Link>
+                </template>
 
-            <template v-else>
-                <Link :href="login()">Log in</Link>
+                <template v-else>
+                    <Link :href="login()">Log in</Link>
 
-                <Link v-if="canRegister" :href="register()">
-                    Join the neighborhood
-                </Link>
-            </template>
-        </nav>
-    </details>
+                    <Link v-if="canRegister" :href="register()">
+                        Join the neighborhood
+                    </Link>
+                </template>
+            </nav>
+        </details>
+    </div>
 
     <!-- Panel shortcuts remain visible while the map is unobstructed -->
     <nav

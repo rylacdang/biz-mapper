@@ -22,8 +22,12 @@ class ReviewService
     /**
      * Keep the public list separate from the viewer's own review.
      */
-    public function pageData(Business $business, ?User $user, int $page = 1): array
+    public function pageData(Business $business, ?User $user, int $page = 1, ?int $reviewId = null): array
     {
+        if ($reviewId !== null) {
+            $page = $this->reviewRepo->pageForReview($business->id, $reviewId);
+        }
+
         $own = $user?->role === UserRole::CONSUMER
             ? $this->reviewRepo->forUser($business->id, $user->id) : null;
 

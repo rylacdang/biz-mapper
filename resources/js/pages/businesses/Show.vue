@@ -8,6 +8,7 @@ import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
 import BusinessIdentity from '@/components/businesses/BusinessIdentity.vue';
 import BusinessReviewSummary from '@/components/businesses/BusinessReviewSummary.vue';
+import NotificationBell from '@/components/NotificationBell.vue';
 import { DEFAULT_SEARCH_RADIUS } from '@/constants/map';
 import BusinessCatalog from '@/pages/businesses/partials/BusinessCatalog.vue';
 import BusinessReviews from '@/pages/businesses/partials/BusinessReviews.vue';
@@ -109,13 +110,21 @@ const carouselItems = computed(() =>
                     >
                 </Link>
 
-                <Link
-                    :href="explorerUrl"
-                    class="inline-flex h-9 items-center gap-2 rounded-full border border-explorer-line px-3 text-[11px] font-semibold text-explorer-ink hover:bg-explorer-cloud"
-                >
-                    <ArrowLeft :size="16" />
-                    Explore nearby
-                </Link>
+                <div class="flex items-center gap-3">
+                    <NotificationBell />
+                    <Link
+                        :href="explorerUrl"
+                        aria-label="Explore nearby"
+                        class="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-explorer-line px-3 text-[11px] font-semibold text-explorer-ink hover:bg-explorer-cloud"
+                    >
+                        <ArrowLeft :size="16" />
+                        <span
+                            >Explore<span class="hidden sm:inline">
+                                nearby</span
+                            ></span
+                        >
+                    </Link>
+                </div>
             </nav>
         </header>
 

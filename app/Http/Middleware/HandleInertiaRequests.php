@@ -2,11 +2,19 @@
 
 namespace App\Http\Middleware;
 
+use App\Repositories\Contracts\NotificationRepositoryInterface;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    /**
+     * Inject the inbox query dependency without a pass-through service.
+     */
+    public function __construct(
+        private readonly NotificationRepositoryInterface $notificationRepo
+    ) {}
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -41,6 +49,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'notificationUnreadCount' => fn () => $request->user()
+                ? $this->notificationRepo->unreadCount($request->user()) : 0,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

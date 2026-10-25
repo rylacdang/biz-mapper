@@ -60,4 +60,15 @@ class ReviewRepository extends BaseRepository implements ReviewRepositoryInterfa
     {
         ReviewReply::where('review_id', $reviewId)->delete();
     }
+
+    public function pageForReview(int $businessId, int $reviewId): int
+    {
+        $published = $this->query()->where('business_id', $businessId)->where('status', ReviewStatus::PUBLISHED);
+
+        if (! (clone $published)->whereKey($reviewId)->exists()) {
+            return 1;
+        }
+
+        return intdiv($published->where('id', '>', $reviewId)->count(), 10) + 1;
+    }
 }

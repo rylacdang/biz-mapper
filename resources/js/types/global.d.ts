@@ -20,6 +20,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            notificationUnreadCount: number;
             [key: string]: unknown;
         };
     }

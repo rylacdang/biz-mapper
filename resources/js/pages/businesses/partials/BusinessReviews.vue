@@ -343,6 +343,7 @@ onUnmounted(() => {
             <article
                 v-for="review in feedback.reviews.data"
                 :key="review.id"
+                :id="'review-' + review.id"
                 class="min-w-0 rounded-2xl border border-explorer-line bg-white p-5"
             >
                 <header class="flex items-start justify-between gap-3">
