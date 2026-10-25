@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -16,6 +18,30 @@ class BusinessService
         private readonly BusinessRepositoryInterface $businessRepo,
         private readonly BusinessOfferingService $offeringService,
     ) {}
+
+    /**
+     * Count a visitor once per day without allowing analytics failures to block profiles.
+     */
+    public function recordProfileView(Business $business, ?int $viewerId, string $visitorKey): void
+    {
+        if ($viewerId === $business->user_id || $business->trashed()) {
+            return;
+        }
+
+        $key = 'business-profile-view:'.$business->id.':'
+            .hash_hmac('sha256', $visitorKey, config('app.key'));
+
+        try {
+            if (Cache::add($key, true, now()->addDay())) {
+                $this->businessRepo->incrementProfileViews($business->id);
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Profile view tracking unavailable.', [
+                'business_id' => $business->id,
+                'category' => class_basename($exception),
+            ]);
+        }
+    }
 
     /**
      * Build share metadata from the business's actual content.

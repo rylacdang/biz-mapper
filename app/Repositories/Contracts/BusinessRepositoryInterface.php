@@ -10,6 +10,16 @@ use Illuminate\Database\Eloquent\Model;
 interface BusinessRepositoryInterface extends BaseRepositoryInterface
 {
     /**
+     * Increment the profile counter without changing listing edit timestamps.
+     */
+    public function incrementProfileViews(int $businessId): bool;
+
+    /**
+     * Load fresh profile views and published-review metrics for owned listings.
+     */
+    public function getOwnerInsights(int $ownerId, array $businessIds): Collection;
+
+    /**
      * Find a business profile with its category or throw when missing.
      */
     public function findBySlugWithCategoryOrFail(string $slug): Business;
@@ -25,9 +35,9 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
     public function getAllWithCategory(): Collection;
 
     /**
-     * Get businesses by user ID with category relation.
+     * Paginate the owner's listings with independent name and status filters.
      */
-    public function getByUserIdWithCategory(int|string $userId): Collection;
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator;
 
     /**
      * Get businesses by category with category relation.

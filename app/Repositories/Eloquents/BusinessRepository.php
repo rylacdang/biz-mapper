@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Eloquents;
 
+use App\Enums\ReviewStatus;
 use App\Models\Business;
 use App\Repositories\Contracts\BusinessRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -14,6 +15,22 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
     public function __construct(Business $business)
     {
         parent::__construct($business);
+    }
+
+    public function incrementProfileViews(int $businessId): bool
+    {
+        return $this->query()->whereKey($businessId)->toBase()->increment('view_count') > 0;
+    }
+
+    public function getOwnerInsights(int $ownerId, array $businessIds): Collection
+    {
+        $published = fn ($query) => $query->where('status', ReviewStatus::PUBLISHED);
+
+        return $this->query()->where('user_id', $ownerId)->whereIn('id', $businessIds)
+            ->select(['id', 'view_count'])
+            ->withCount(['reviews as published_reviews_count' => $published])
+            ->withAvg(['reviews as published_rating' => $published], 'rating')
+            ->orderBy('id')->get();
     }
 
     public function getSlugPatternCount(string $slug): int
@@ -36,12 +53,20 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         return $this->query()->with('category')->get();
     }
 
-    public function getByUserIdWithCategory(int|string $userId): Collection
+    /**
+     * Fetch five editable owner listings and clamp pages after a listing is removed.
+     */
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator
     {
-        return $this->query()
-            ->where('user_id', $userId)
-            ->with('category')
-            ->get();
+        $listings = $this->query()->where('user_id', $userId)
+            ->when($query !== '', fn ($builder) => $builder->where('name', 'like', '%'.$query.'%'))
+            ->when($status !== 'all', fn ($builder) => $builder->where('status', $status))
+            ->with('category')->orderByDesc('id');
+        $results = $listings->paginate(5, ['*'], 'listings_page', $page);
+
+        return $page > $results->lastPage()
+            ? $listings->paginate(5, ['*'], 'listings_page', $results->lastPage(), $results->total())
+            : $results;
     }
 
     public function getByCategoryWithCategory(string $categoryName): Collection

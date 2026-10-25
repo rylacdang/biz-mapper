@@ -16,6 +16,16 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         parent::__construct($eloquentRepo, 'businesses');
     }
 
+    public function incrementProfileViews(int $businessId): bool
+    {
+        return $this->eloquentRepo->incrementProfileViews($businessId);
+    }
+
+    public function getOwnerInsights(int $ownerId, array $businessIds): Collection
+    {
+        return $this->eloquentRepo->getOwnerInsights($ownerId, $businessIds);
+    }
+
     public function getSlugPatternCount(string $slug): int
     {
         return $this->eloquentRepo->getSlugPatternCount($slug);
@@ -34,12 +44,12 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         );
     }
 
-    public function getByUserIdWithCategory(int|string $userId): Collection
+    /**
+     * Keep filtered owner pages fresh without caching every query combination.
+     */
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator
     {
-        return $this->remember(
-            "user.{$userId}.businesses",
-            fn () => $this->eloquentRepo->getByUserIdWithCategory($userId)
-        );
+        return $this->eloquentRepo->paginateByUserIdWithCategory($userId, $query, $status, $page);
     }
 
     public function getByCategoryWithCategory(string $categoryName): Collection

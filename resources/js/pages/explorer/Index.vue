@@ -19,6 +19,8 @@ import SharedCollection from '@/pages/explorer/partials/SharedCollection.vue';
 import { index as explorerIndex } from '@/routes/explorer';
 import type {
     Business,
+    BusinessInsights,
+    OwnerListingPagination,
     Category,
     Coordinates,
     DiscoveryShortcut,
@@ -35,6 +37,8 @@ const props = withDefaults(
         discoveryShortcuts?: DiscoveryShortcut[];
         offeringCurrencies?: string[];
         myBusinesses?: Business[];
+        ownerInsights?: Record<number, BusinessInsights>;
+        ownerPagination?: OwnerListingPagination;
         trashBusinesses?: Business[];
         canRegister?: boolean;
         directionsBusiness?: SearchBusiness | null;
@@ -46,6 +50,17 @@ const props = withDefaults(
         discoveryShortcuts: () => [],
         offeringCurrencies: () => [],
         myBusinesses: () => [],
+        ownerInsights: () => ({}),
+        ownerPagination: () => ({
+            current_page: 1,
+            last_page: 1,
+            per_page: 5,
+            total: 0,
+            from: null,
+            to: null,
+            query: '',
+            status: 'all',
+        }),
         trashBusinesses: () => [],
         canRegister: false,
         directionsBusiness: null,
@@ -795,6 +810,8 @@ onUnmounted(() => {
                 <OwnerWorkspace
                     v-if="workspace && owner"
                     :places="myBusinesses"
+                    :insights="ownerInsights"
+                    :pagination="ownerPagination"
                     :trash="trashBusinesses"
                     :showing-trash="showingTrash"
                     :busy="busy"

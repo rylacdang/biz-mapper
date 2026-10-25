@@ -229,3 +229,81 @@ test('shortcuts with missing categories return an honest empty result', function
     $this->getJson(route('businesses.search', ['lat' => 14.6, 'lng' => 121, 'radius' => 0.5, 'shortcut' => 'food-nearby']))
         ->assertOk()->assertJsonPath('meta.total', 0)->assertJsonCount(0, 'data')->assertJsonCount(0, 'markers');
 });
+
+test('owner listings use five-record pages and return metrics for the visible page only', function () {
+    for ($i = 1; $i <= 7; $i++) {
+        $listing = $this->listing->replicate();
+        $listing->fill(['name' => 'Coffee '.$i, 'slug' => 'coffee-'.$i, 'status' => $i % 2 === 0 ? 'active' : 'pending']);
+        $listing->save();
+    }
+
+    $this->actingAs($this->owner)->get(route('explorer.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('myBusinesses', 5)->has('ownerInsights', 5)
+            ->where('ownerPagination.total', 8)
+            ->where('ownerPagination.per_page', 5)
+            ->where('ownerPagination.current_page', 1)
+            ->where('ownerPagination.last_page', 2)
+            ->where('ownerPagination.from', 1)->where('ownerPagination.to', 5)
+            ->missing("ownerInsights.{$this->listing->id}"));
+
+    $this->get(route('explorer.index', ['listings_page' => 2]), [
+        'X-Inertia' => 'true', 'X-Inertia-Version' => Inertia::getVersion(),
+        'X-Inertia-Partial-Component' => 'explorer/Index',
+        'X-Inertia-Partial-Data' => 'myBusinesses,ownerInsights,ownerPagination',
+    ])->assertOk()->assertJsonCount(3, 'props.myBusinesses')
+        ->assertJsonPath('props.ownerPagination.current_page', 2)
+        ->assertJsonPath('props.ownerPagination.from', 6)
+        ->assertJsonPath('props.ownerPagination.to', 8)
+        ->assertJsonMissingPath('props.trashBusinesses')
+        ->assertJsonMissingPath('props.categories');
+});
+
+test('listing filters search only the owners nondeleted businesses', function () {
+    $match = $this->listing->replicate();
+    $match->fill(['name' => 'Special Coffee', 'slug' => 'special-coffee', 'status' => 'active']);
+    $match->save();
+    $deleted = $match->replicate();
+    $deleted->slug = 'deleted-special-coffee';
+    $deleted->save();
+    $deleted->delete();
+    $other = $match->replicate();
+    $other->fill(['slug' => 'another-owner-coffee', 'user_id' => User::factory()->create(['role' => UserRole::OWNER])->id]);
+    $other->save();
+
+    $this->actingAs($this->owner)->get(route('explorer.index', [
+        'listings_query' => '  Special  ', 'listings_status' => 'active', 'listings_page' => 100,
+    ]))->assertInertia(fn (AssertableInertia $page) => $page
+        ->has('myBusinesses', 1)->has('ownerInsights', 1)
+        ->where('myBusinesses.0.id', $match->id)
+        ->where('ownerPagination.total', 1)
+        ->where('ownerPagination.current_page', 1)
+        ->where('ownerPagination.query', 'Special')
+        ->where('ownerPagination.status', 'active')
+        ->where('selectedCategory', 'all'));
+
+    $this->get(route('explorer.index', ['listings_query' => 'Special', 'listings_status' => 'pending']))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('myBusinesses', 0)->has('ownerInsights', 0)
+            ->where('ownerPagination.total', 0));
+});
+
+test('listing query validation rejects invalid pages statuses and oversized names', function (array $query, string $field) {
+    $this->actingAs($this->owner)->getJson(route('explorer.index', $query))
+        ->assertUnprocessable()->assertJsonValidationErrors($field);
+})->with([
+    [['listings_page' => 0], 'listings_page'],
+    [['listings_status' => 'hidden'], 'listings_status'],
+    [['listings_query' => ['invalid']], 'listings_query'],
+    [['listings_query' => str_repeat('a', 101)], 'listings_query'],
+]);
+
+test('owner pagination is never exposed to guests or consumers', function () {
+    $this->get(route('explorer.index', ['listings_page' => 2]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->missing('myBusinesses')->missing('ownerPagination')->missing('ownerInsights'));
+    $this->actingAs(User::factory()->create(['role' => UserRole::CONSUMER]));
+    $this->get(route('explorer.index', ['listings_query' => 'Coffee', 'listings_status' => 'pending']))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->missing('myBusinesses')->missing('ownerPagination')->missing('ownerInsights'));
+});

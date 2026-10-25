@@ -25,8 +25,14 @@ class ExplorerService
     /**
      * Include management records only for their owner.
      */
-    public function pageData(string $category, ?User $user, ?string $destination = null, ?PlaceCollection $collection = null, int $collectionPage = 1): array
-    {
+    public function pageData(
+        string $category,
+        ?User $user,
+        ?string $destination = null,
+        ?PlaceCollection $collection = null,
+        int $collectionPage = 1,
+        array $listingFilters = [],
+    ): array {
         $data = [
             'canRegister' => Features::enabled(Features::registration()),
             'categories' => $this->categoryRepo->all(),
@@ -55,7 +61,29 @@ class ExplorerService
 
         if ($user?->role === UserRole::OWNER) {
             $data['offeringCurrencies'] = config('business.currencies');
-            $data['myBusinesses'] = $this->businessRepo->getByUserIdWithCategory($user->id);
+            $query = trim((string) ($listingFilters['listings_query'] ?? ''));
+            $status = $listingFilters['listings_status'] ?? 'all';
+            $listings = $this->businessRepo->paginateByUserIdWithCategory(
+                $user->id, $query, $status, (int) ($listingFilters['listings_page'] ?? 1),
+            );
+            $data['myBusinesses'] = $listings->getCollection();
+            $data['ownerPagination'] = [
+                'current_page' => $listings->currentPage(),
+                'last_page' => $listings->lastPage(),
+                'per_page' => $listings->perPage(),
+                'total' => $listings->total(),
+                'from' => $listings->firstItem(),
+                'to' => $listings->lastItem(),
+                'query' => $query,
+                'status' => $status,
+            ];
+            $data['ownerInsights'] = fn () => $this->businessRepo->getOwnerInsights($user->id, $listings->getCollection()->modelKeys())
+                ->mapWithKeys(fn ($business) => [$business->id => [
+                    'profile_views' => (int) $business->view_count,
+                    'review_count' => (int) $business->published_reviews_count,
+                    'average_rating' => $business->published_rating === null
+                        ? null : round((float) $business->published_rating, 1),
+                ]])->all();
             $data['trashBusinesses'] = fn () => $this->businessRepo->getTrashedByUserIdWithCategory($user->id);
         }
 

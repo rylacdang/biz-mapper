@@ -203,3 +203,16 @@ export interface ReviewSummary {
     review_count: number;
     sampled_review_count: number;
 }
+
+export interface BusinessInsights {
+    profile_views: number;
+    review_count: number;
+    average_rating: number | null;
+}
+
+export interface OwnerListingPagination extends SearchPagination {
+    from: number | null;
+    to: number | null;
+    query: string;
+    status: 'all' | 'active' | 'pending';
+}

@@ -27,6 +27,9 @@ class IndexExplorerRequest extends FormRequest
             'collection' => ['sometimes', 'nullable', 'uuid'],
             'collection_page' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'destination' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'listings_query' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'listings_status' => ['sometimes', 'string', Rule::in(['all', 'active', 'pending'])],
+            'listings_page' => ['sometimes', 'integer', 'min:1', 'max:100000'],
         ];
     }
 }

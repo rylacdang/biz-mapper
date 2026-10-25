@@ -39,6 +39,12 @@ class ShowController extends Controller
             return response()->json(['data' => (new BusinessProfileResource($business))->resolve($request)])->header('Cache-Control', 'private, no-store');
         }
 
+        $visitorKey = $request->profileVisitorKey();
+
+        if ($visitorKey !== null) {
+            $this->businessService->recordProfileView($business, $request->user()?->id, $visitorKey);
+        }
+
         return Inertia::render('businesses/Show', [
             'business' => (new BusinessProfileResource($business))->resolve($request),
             'feedback' => $this->reviewService->pageData($business, $request->user()),
