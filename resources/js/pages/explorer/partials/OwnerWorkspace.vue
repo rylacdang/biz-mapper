@@ -38,7 +38,6 @@ const emit = defineEmits<{
 }>();
 
 const query = ref(props.pagination.query);
-const status = ref(props.pagination.status);
 const loading = ref(false);
 const error = ref('');
 const failedLogos = ref<Record<number, string>>({});
@@ -59,12 +58,11 @@ function handleLoadListings(page = 1, refreshOnly = false) {
     };
     const filters = refreshOnly
         ? props.pagination
-        : { query: query.value.trim(), status: status.value };
+        : { query: query.value.trim() };
 
     router.reload({
         data: {
             listings_query: filters.query,
-            listings_status: filters.status,
             listings_page: page,
         },
         only: refreshOnly
@@ -88,7 +86,6 @@ watch(
     () => props.pagination,
     (pagination) => {
         query.value = pagination.query;
-        status.value = pagination.status;
     },
 );
 
@@ -139,11 +136,11 @@ onUnmounted(() => cancelVisit?.());
         <!-- Listing filters remain separate from the public map search. -->
         <form
             v-if="!showingTrash"
-            class="mt-4 space-y-2"
+            class="mt-4 flex items-center gap-2"
             @submit.prevent="handleLoadListings()"
         >
             <div
-                class="flex h-9 items-center rounded-lg border border-explorer-line bg-explorer-cloud focus-within:border-explorer-blue"
+                class="flex h-9 min-w-0 flex-1 items-center rounded-lg border border-explorer-line bg-explorer-cloud focus-within:border-explorer-blue"
             >
                 <input
                     v-model="query"
@@ -163,32 +160,19 @@ onUnmounted(() => cancelVisit?.());
                     <Search :size="15" />
                 </button>
             </div>
-            <div class="flex items-center justify-between gap-3">
-                <select
-                    v-model="status"
-                    aria-label="Listing status"
-                    class="h-9 min-w-0 rounded-lg border border-explorer-line bg-white px-2.5 text-[11px] text-slate-600 outline-none focus:border-explorer-blue"
-                    :disabled="loading"
-                    @change="handleLoadListings()"
-                >
-                    <option value="all">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                </select>
-                <button
-                    type="button"
-                    class="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[11px] text-explorer-blue hover:bg-blue-50 disabled:cursor-default disabled:opacity-50"
-                    :disabled="loading"
-                    @click="handleLoadListings(pagination.current_page, true)"
-                >
-                    <RefreshCw
-                        :size="12"
-                        :class="{ 'motion-safe:animate-spin': loading }"
-                        aria-hidden="true"
-                    />
-                    Refresh
-                </button>
-            </div>
+            <button
+                type="button"
+                class="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[11px] text-explorer-blue hover:bg-blue-50 disabled:cursor-default disabled:opacity-50"
+                :disabled="loading"
+                @click="handleLoadListings(pagination.current_page, true)"
+            >
+                <RefreshCw
+                    :size="12"
+                    :class="{ 'motion-safe:animate-spin': loading }"
+                    aria-hidden="true"
+                />
+                Refresh
+            </button>
         </form>
 
         <p
@@ -240,22 +224,6 @@ onUnmounted(() => cancelVisit?.());
                                 >{{ place.name }}</Link
                             >
                         </h3>
-                        <span
-                            class="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-medium"
-                            :class="
-                                !showingTrash && place.status === 'active'
-                                    ? 'bg-blue-50 text-explorer-blue'
-                                    : 'bg-slate-100 text-slate-500'
-                            "
-                        >
-                            {{
-                                showingTrash
-                                    ? 'Deleted'
-                                    : place.status === 'active'
-                                      ? 'Active'
-                                      : 'Pending'
-                            }}
-                        </span>
                     </div>
                     <p class="mt-1 truncate text-[10px] text-slate-400">
                         {{ place.category?.name }}
@@ -363,7 +331,7 @@ onUnmounted(() => cancelVisit?.());
                 {{
                     showingTrash
                         ? 'Trash is empty'
-                        : pagination.query || pagination.status !== 'all'
+                        : pagination.query
                           ? 'No listings found'
                           : 'Put your business on the map'
                 }}
@@ -372,8 +340,8 @@ onUnmounted(() => cancelVisit?.());
                 {{
                     showingTrash
                         ? 'Deleted listings will appear here.'
-                        : pagination.query || pagination.status !== 'all'
-                          ? 'Try another business name or status.'
+                        : pagination.query
+                          ? 'Try another business name.'
                           : 'Add your business to get started.'
                 }}
             </p>

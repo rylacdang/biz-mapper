@@ -59,7 +59,6 @@ const props = withDefaults(
             from: null,
             to: null,
             query: '',
-            status: 'all',
         }),
         trashBusinesses: () => [],
         canRegister: false,

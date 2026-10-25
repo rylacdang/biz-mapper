@@ -53,7 +53,6 @@ export interface SearchBusiness extends Coordinates {
 export interface Business extends SearchBusiness {
     user_id: number;
     category_id: number;
-    status: 'pending' | 'active';
     region_code?: string | null;
     province_code?: string | null;
     city_code?: string | null;
@@ -214,5 +213,4 @@ export interface OwnerListingPagination extends SearchPagination {
     from: number | null;
     to: number | null;
     query: string;
-    status: 'all' | 'active' | 'pending';
 }

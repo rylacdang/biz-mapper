@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\BusinessStatus;
 use App\Observers\BusinessSummaryObserver;
 use App\Policies\BusinessPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -31,7 +30,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'logo',
     'gallery_photos',
     'hours',
-    'status',
     'view_count',
     'region_code',
     'province_code',
@@ -76,7 +74,6 @@ class Business extends Model
         return [
             'lat' => 'float',
             'lng' => 'float',
-            'status' => BusinessStatus::class,
             'view_count' => 'integer',
             'gallery_photos' => 'array',
             'social_links' => 'array',
@@ -112,14 +109,6 @@ class Business extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
-    }
-
-    /**
-     * Scope active businesses
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('status', BusinessStatus::ACTIVE);
     }
 
     /**

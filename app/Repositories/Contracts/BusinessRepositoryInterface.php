@@ -35,9 +35,9 @@ interface BusinessRepositoryInterface extends BaseRepositoryInterface
     public function getAllWithCategory(): Collection;
 
     /**
-     * Paginate the owner's listings with independent name and status filters.
+     * Paginate the owner's listings with an independent name filter.
      */
-    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator;
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', int $page = 1): LengthAwarePaginator;
 
     /**
      * Get businesses by category with category relation.

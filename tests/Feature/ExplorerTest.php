@@ -5,7 +5,10 @@ use App\Enums\UserRole;
 use App\Models\Business;
 use App\Models\Category;
 use App\Models\User;
+use Database\Seeders\BusinessSeeder;
+use Database\Seeders\CategorySeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Testing\AssertableInertia;
 
@@ -233,7 +236,7 @@ test('shortcuts with missing categories return an honest empty result', function
 test('owner listings use five-record pages and return metrics for the visible page only', function () {
     for ($i = 1; $i <= 7; $i++) {
         $listing = $this->listing->replicate();
-        $listing->fill(['name' => 'Coffee '.$i, 'slug' => 'coffee-'.$i, 'status' => $i % 2 === 0 ? 'active' : 'pending']);
+        $listing->fill(['name' => 'Coffee '.$i, 'slug' => 'coffee-'.$i]);
         $listing->save();
     }
 
@@ -261,7 +264,7 @@ test('owner listings use five-record pages and return metrics for the visible pa
 
 test('listing filters search only the owners nondeleted businesses', function () {
     $match = $this->listing->replicate();
-    $match->fill(['name' => 'Special Coffee', 'slug' => 'special-coffee', 'status' => 'active']);
+    $match->fill(['name' => 'Special Coffee', 'slug' => 'special-coffee']);
     $match->save();
     $deleted = $match->replicate();
     $deleted->slug = 'deleted-special-coffee';
@@ -272,28 +275,26 @@ test('listing filters search only the owners nondeleted businesses', function ()
     $other->save();
 
     $this->actingAs($this->owner)->get(route('explorer.index', [
-        'listings_query' => '  Special  ', 'listings_status' => 'active', 'listings_page' => 100,
+        'listings_query' => '  Special  ', 'listings_page' => 100,
     ]))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('myBusinesses', 1)->has('ownerInsights', 1)
         ->where('myBusinesses.0.id', $match->id)
         ->where('ownerPagination.total', 1)
         ->where('ownerPagination.current_page', 1)
         ->where('ownerPagination.query', 'Special')
-        ->where('ownerPagination.status', 'active')
         ->where('selectedCategory', 'all'));
 
-    $this->get(route('explorer.index', ['listings_query' => 'Special', 'listings_status' => 'pending']))
+    $this->get(route('explorer.index', ['listings_query' => 'Missing business']))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->has('myBusinesses', 0)->has('ownerInsights', 0)
             ->where('ownerPagination.total', 0));
 });
 
-test('listing query validation rejects invalid pages statuses and oversized names', function (array $query, string $field) {
+test('listing query validation rejects invalid pages and oversized names', function (array $query, string $field) {
     $this->actingAs($this->owner)->getJson(route('explorer.index', $query))
         ->assertUnprocessable()->assertJsonValidationErrors($field);
 })->with([
     [['listings_page' => 0], 'listings_page'],
-    [['listings_status' => 'hidden'], 'listings_status'],
     [['listings_query' => ['invalid']], 'listings_query'],
     [['listings_query' => str_repeat('a', 101)], 'listings_query'],
 ]);
@@ -303,7 +304,25 @@ test('owner pagination is never exposed to guests or consumers', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->missing('myBusinesses')->missing('ownerPagination')->missing('ownerInsights'));
     $this->actingAs(User::factory()->create(['role' => UserRole::CONSUMER]));
-    $this->get(route('explorer.index', ['listings_query' => 'Coffee', 'listings_status' => 'pending']))
+    $this->get(route('explorer.index', ['listings_query' => 'Coffee']))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->missing('myBusinesses')->missing('ownerPagination')->missing('ownerInsights'));
+});
+
+test('businesses have no approval status column or owner payload field', function () {
+    expect(Schema::hasColumn('businesses', 'status'))->toBeFalse();
+
+    $this->actingAs($this->owner)->get(route('explorer.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->missing('myBusinesses.0.status')
+            ->missing('ownerPagination.status'));
+});
+
+test('business seeding works without approval statuses and keeps hours as structured data', function () {
+    $this->seed(CategorySeeder::class);
+    $this->seed(BusinessSeeder::class);
+
+    $seeded = Business::where('id', '!=', $this->listing->id)->firstOrFail();
+    expect($seeded->hours)->toBeArray()
+        ->and($seeded->getAttributes())->not->toHaveKey('status');
 });

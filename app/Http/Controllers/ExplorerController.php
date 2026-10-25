@@ -35,7 +35,7 @@ class ExplorerController extends Controller
             $request->validated('destination'),
             $collection,
             $request->integer('collection_page', 1),
-            $request->safe()->only(['listings_query', 'listings_status', 'listings_page']),
+            $request->safe()->only(['listings_query', 'listings_page']),
         ))->toResponse($request)->header('Cache-Control', 'private, no-store');
     }
 }

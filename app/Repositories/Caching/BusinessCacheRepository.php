@@ -44,12 +44,9 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         );
     }
 
-    /**
-     * Keep filtered owner pages fresh without caching every query combination.
-     */
-    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', int $page = 1): LengthAwarePaginator
     {
-        return $this->eloquentRepo->paginateByUserIdWithCategory($userId, $query, $status, $page);
+        return $this->eloquentRepo->paginateByUserIdWithCategory($userId, $query, $page);
     }
 
     public function getByCategoryWithCategory(string $categoryName): Collection

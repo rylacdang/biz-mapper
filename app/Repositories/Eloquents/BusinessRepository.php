@@ -53,14 +53,10 @@ class BusinessRepository extends BaseRepository implements BusinessRepositoryInt
         return $this->query()->with('category')->get();
     }
 
-    /**
-     * Fetch five editable owner listings and clamp pages after a listing is removed.
-     */
-    public function paginateByUserIdWithCategory(int $userId, string $query = '', string $status = 'all', int $page = 1): LengthAwarePaginator
+    public function paginateByUserIdWithCategory(int $userId, string $query = '', int $page = 1): LengthAwarePaginator
     {
         $listings = $this->query()->where('user_id', $userId)
             ->when($query !== '', fn ($builder) => $builder->where('name', 'like', '%'.$query.'%'))
-            ->when($status !== 'all', fn ($builder) => $builder->where('status', $status))
             ->with('category')->orderByDesc('id');
         $results = $listings->paginate(5, ['*'], 'listings_page', $page);
 

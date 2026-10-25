@@ -62,9 +62,8 @@ class ExplorerService
         if ($user?->role === UserRole::OWNER) {
             $data['offeringCurrencies'] = config('business.currencies');
             $query = trim((string) ($listingFilters['listings_query'] ?? ''));
-            $status = $listingFilters['listings_status'] ?? 'all';
             $listings = $this->businessRepo->paginateByUserIdWithCategory(
-                $user->id, $query, $status, (int) ($listingFilters['listings_page'] ?? 1),
+                $user->id, $query, (int) ($listingFilters['listings_page'] ?? 1),
             );
             $data['myBusinesses'] = $listings->getCollection();
             $data['ownerPagination'] = [
@@ -75,7 +74,6 @@ class ExplorerService
                 'from' => $listings->firstItem(),
                 'to' => $listings->lastItem(),
                 'query' => $query,
-                'status' => $status,
             ];
             $data['ownerInsights'] = fn () => $this->businessRepo->getOwnerInsights($user->id, $listings->getCollection()->modelKeys())
                 ->mapWithKeys(fn ($business) => [$business->id => [
