@@ -10,6 +10,14 @@ use App\Models\User;
 class ReviewPolicy extends BasePolicy
 {
     /**
+     * Only consumers can browse their personal review history.
+     */
+    public function viewAny(User $user): bool
+    {
+        return $user->role === UserRole::CONSUMER;
+    }
+
+    /**
      * Consumers may review an available business they do not own.
      */
     public function create(User $user, Business $business): bool

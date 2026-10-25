@@ -8,6 +8,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 interface ReviewRepositoryInterface extends BaseRepositoryInterface
 {
     /**
+     * Paginate the author's reviews, including hidden and unavailable places.
+     */
+    public function historyForUser(int $userId, int $page = 1): LengthAwarePaginator;
+
+    /**
      * Paginate published reviews with authors and replies.
      */
     public function forBusiness(int $businessId, int $page = 1): LengthAwarePaginator;

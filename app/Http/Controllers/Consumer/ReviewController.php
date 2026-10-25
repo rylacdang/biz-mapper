@@ -3,21 +3,35 @@
 namespace App\Http\Controllers\Consumer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Review\IndexReviewsRequest;
 use App\Http\Requests\Review\SaveReviewRequest;
+use App\Http\Resources\ReviewHistoryResource;
 use App\Models\Business;
 use App\Models\Review;
+use App\Repositories\Contracts\ReviewRepositoryInterface;
 use App\Services\ReviewService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
 class ReviewController extends Controller
 {
-    /**
-     * Use the review service for transactional review changes.
-     */
     public function __construct(
         private readonly ReviewService $reviewService,
+        private readonly ReviewRepositoryInterface $reviewRepo,
     ) {}
+
+    /**
+     * List only the signed-in consumer's own reviews.
+     */
+    public function index(IndexReviewsRequest $request): JsonResponse
+    {
+        Gate::authorize('viewAny', Review::class);
+
+        return ReviewHistoryResource::collection(
+            $this->reviewRepo->historyForUser($request->user()->id, (int) $request->validated('page', 1))
+        )->response()->header('Cache-Control', 'private, no-store');
+    }
 
     /**
      * Publish the consumer's first review for this business.

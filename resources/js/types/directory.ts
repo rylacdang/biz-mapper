@@ -214,3 +214,16 @@ export interface OwnerListingPagination extends SearchPagination {
     to: number | null;
     query: string;
 }
+
+export interface ReviewHistoryItem extends Omit<
+    BusinessReview,
+    'author' | 'can_edit'
+> {
+    business: { name: string; logo: string | null } | null;
+    url: string | null;
+}
+
+export interface ReviewHistoryPage {
+    data: ReviewHistoryItem[];
+    meta: SearchPagination;
+}

@@ -28,6 +28,7 @@ const emit = defineEmits<{
     search: [];
     explore: [];
     saved: [];
+    reviews: [];
     listings: [];
     create: [];
 }>();
@@ -51,6 +52,11 @@ function handleOpenListings() {
 function handleOpenSaved() {
     closeAccountMenu();
     emit('saved');
+}
+
+function handleOpenReviews() {
+    closeAccountMenu();
+    emit('reviews');
 }
 
 function handleCreateListing() {
@@ -174,6 +180,13 @@ function handleCreateListing() {
                         @click="handleOpenSaved"
                     >
                         Saved places
+                    </button>
+
+                    <button
+                        v-if="page.props.auth.user.role === 'consumer'"
+                        @click="handleOpenReviews"
+                    >
+                        My reviews
                     </button>
 
                     <Link href="/settings/profile">Profile and settings</Link>

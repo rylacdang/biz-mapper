@@ -8,12 +8,28 @@ use App\Models\Review;
 use App\Models\ReviewReply;
 use App\Repositories\Contracts\ReviewRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ReviewRepository extends BaseRepository implements ReviewRepositoryInterface
 {
     public function __construct(Review $review)
     {
         parent::__construct($review);
+    }
+
+    public function historyForUser(int $userId, int $page = 1): LengthAwarePaginator
+    {
+        $query = $this->query()->where('user_id', $userId)
+            ->with([
+                'business' => fn (BelongsTo $business) => $business->withTrashed()
+                    ->select(['id', 'name', 'slug', 'logo', 'deleted_at']),
+                'reply',
+            ])->orderByDesc('id');
+        $results = $query->paginate(10, ['*'], 'page', $page);
+
+        return $page > $results->lastPage()
+            ? $query->paginate(10, ['*'], 'page', $results->lastPage(), $results->total())
+            : $results;
     }
 
     public function lockBusiness(int $businessId): void

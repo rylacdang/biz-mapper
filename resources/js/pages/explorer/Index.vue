@@ -13,6 +13,7 @@ import CityMap from '@/pages/explorer/partials/CityMap.vue';
 import ExplorerSearch from '@/pages/explorer/partials/ExplorerSearch.vue';
 import ExplorerToolbar from '@/pages/explorer/partials/ExplorerToolbar.vue';
 import ListingDrawer from '@/pages/explorer/partials/listings/ListingDrawer.vue';
+import MyReviews from '@/pages/explorer/partials/MyReviews.vue';
 import OwnerWorkspace from '@/pages/explorer/partials/OwnerWorkspace.vue';
 import SavedPlaces from '@/pages/explorer/partials/SavedPlaces.vue';
 import SharedCollection from '@/pages/explorer/partials/SharedCollection.vue';
@@ -70,6 +71,8 @@ const page = usePage();
 const owner = computed(() => page.props.auth?.user?.role === 'owner');
 const consumer = computed(() => page.props.auth?.user?.role === 'consumer');
 const savedView = ref(false);
+const reviewsOpen = ref(false);
+let reviewTrigger: HTMLElement | null = null;
 const sharedView = ref(Boolean(props.sharedCollection));
 const sharedLoading = ref(false);
 const sharedError = ref('');
@@ -386,6 +389,18 @@ function handleOpenSaved() {
     savedView.value = true;
 }
 
+function handleOpenReviews() {
+    if (consumer.value) {
+        reviewTrigger = document.activeElement as HTMLElement;
+        reviewsOpen.value = true;
+    }
+}
+
+function handleCloseReviews() {
+    reviewsOpen.value = false;
+    void nextTick(() => reviewTrigger?.focus({ preventScroll: true }));
+}
+
 function handleSelectSavedBusiness(business: SearchBusiness) {
     searchState.cancelSelection();
     selected.value = business;
@@ -503,6 +518,7 @@ watch(
     () => page.props.auth?.user?.id,
     () => {
         savedView.value = false;
+        reviewsOpen.value = false;
         collectionPlaces.value = null;
         collectionFocus.value = null;
         selected.value = null;
@@ -618,6 +634,7 @@ onUnmounted(() => {
             @search="handleSearchNearby"
             @explore="handleOpenExplore"
             @saved="handleOpenSaved"
+            @reviews="handleOpenReviews"
             @listings="handleOpenPanel('listings')"
             @create="handleOpenDrawer()"
         />
@@ -927,6 +944,8 @@ onUnmounted(() => {
                 </p>
             </div>
         </aside>
+
+        <MyReviews v-if="reviewsOpen && consumer" @close="handleCloseReviews" />
 
         <!-- Shared create and edit drawer -->
         <ListingDrawer
