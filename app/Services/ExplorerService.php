@@ -60,7 +60,6 @@ class ExplorerService
         }
 
         if ($user?->role === UserRole::OWNER) {
-            $data['offeringCurrencies'] = config('business.currencies');
             $query = trim((string) ($listingFilters['listings_query'] ?? ''));
             $listings = $this->businessRepo->paginateByUserIdWithCategory(
                 $user->id, $query, (int) ($listingFilters['listings_page'] ?? 1),

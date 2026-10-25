@@ -29,7 +29,7 @@ class SaveBusinessOfferingRequest extends FormRequest
             'remove_photo' => ['sometimes', 'boolean'],
             'price' => ['nullable', 'required_with:price_max', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'price_max' => ['nullable', 'numeric', 'decimal:0,2', 'gte:price', 'max:9999999999.99'],
-            'currency' => [Rule::requiredIf($this->input('price') !== null), 'nullable', Rule::in(config('business.currencies'))],
+            'currency' => ['sometimes', 'nullable', Rule::in(['PHP'])],
             'price_unit' => ['nullable', 'string', 'max:50'],
         ];
     }

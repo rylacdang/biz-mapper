@@ -27,7 +27,6 @@ const props = defineProps<{
     categories: Category[];
     initialLocation?: Coordinates | null;
     initialStep?: number;
-    currencies: string[];
 }>();
 
 const emit = defineEmits<{ close: [] }>();
@@ -296,7 +295,6 @@ function handleSubmit() {
                       photo: item.file,
                       price: item.price,
                       price_max: item.price_max,
-                      currency: item.currency,
                       price_unit: item.price_unit,
                   })),
               }),
@@ -1057,7 +1055,6 @@ function handleDelete() {
                     <ListingOfferings
                         v-model="form.offerings"
                         :business-id="listing?.id ?? null"
-                        :currencies="currencies"
                         @busy="catalogBusy = $event"
                         @editing="catalogEditing = $event"
                     />

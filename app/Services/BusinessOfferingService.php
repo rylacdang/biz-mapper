@@ -97,17 +97,20 @@ class BusinessOfferingService
         return $path;
     }
 
+    /**
+     * Use Philippine pesos for priced items and clear unused price details.
+     */
     private function prepare(array $data): array
     {
         unset($data['photo'], $data['remove_photo']);
 
         $data['price'] = $data['price'] ?? null;
+        $data['currency'] = $data['price'] === null ? null : 'PHP';
         $data['price_max'] = $data['price_max'] ?? null;
         $data['price_unit'] = $data['price_unit'] ?? null;
 
         if ($data['price'] === null) {
             $data['price_max'] = null;
-            $data['currency'] = null;
             $data['price_unit'] = null;
         }
 

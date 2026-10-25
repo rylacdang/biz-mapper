@@ -54,7 +54,7 @@ class StoreBusinessRequest extends FormRequest
             'offerings.*.photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'offerings.*.price' => ['nullable', 'required_with:offerings.*.price_max', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'offerings.*.price_max' => ['nullable', 'numeric', 'decimal:0,2', 'gte:offerings.*.price', 'max:9999999999.99'],
-            'offerings.*.currency' => ['required_with:offerings.*.price', 'nullable', Rule::in(config('business.currencies'))],
+            'offerings.*.currency' => ['sometimes', 'nullable', Rule::in(['PHP'])],
             'offerings.*.price_unit' => ['nullable', 'string', 'max:50'],
             'hours' => ['required', 'array'],
             'hours.*.open' => ['nullable', 'date_format:H:i'],

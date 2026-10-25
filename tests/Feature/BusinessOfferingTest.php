@@ -32,13 +32,13 @@ test('an owner can add a product or service with a photo and explicit price rang
     $this->actingAs($this->owner)->post(route('owner.businesses.offerings.store', $this->business), [
         'type' => 'service', 'name' => 'Dry cleaning', 'description' => 'Includes pressing.',
         'photo' => UploadedFile::fake()->image('item.jpg'), 'price' => '80.00',
-        'price_max' => '120.00', 'currency' => 'PHP', 'price_unit' => 'piece',
+        'price_max' => '120.00', 'price_unit' => 'piece',
     ])->assertRedirect(route('explorer.index'))->assertSessionHasNoErrors();
 
     $item = BusinessOffering::where('name', 'Dry cleaning')->firstOrFail();
     expect($item->business_id)->toBe($this->business->id)
         ->and($item->price)->toBe('80.00')->and($item->price_max)->toBe('120.00')
-        ->and($item->price_unit)->toBe('piece');
+        ->and($item->price_unit)->toBe('piece')->and($item->currency)->toBe('PHP');
     Storage::disk('public')->assertExists($item->photo);
 });
 
@@ -54,9 +54,18 @@ test('optional prices and photos stay absent rather than becoming invented value
 
 test('a zero price is preserved when explicitly supplied', function () {
     $this->actingAs($this->owner)->post(route('owner.businesses.offerings.store', $this->business), [
-        'type' => 'service', 'name' => 'Pickup', 'price' => '0', 'currency' => 'PHP',
+        'type' => 'service', 'name' => 'Pickup', 'price' => '0',
     ])->assertSessionHasNoErrors();
-    expect(BusinessOffering::where('name', 'Pickup')->firstOrFail()->price)->toBe('0.00');
+    $item = BusinessOffering::where('name', 'Pickup')->firstOrFail();
+    expect($item->price)->toBe('0.00')->and($item->currency)->toBe('PHP');
+});
+
+test('editing a priced item assigns pesos without a currency input', function () {
+    $this->actingAs($this->owner)->put(route('owner.businesses.offerings.update', [$this->business, $this->item]), [
+        'type' => 'service', 'name' => 'Wash & fold', 'price' => '95.50',
+    ])->assertSessionHasNoErrors();
+
+    expect($this->item->refresh()->price)->toBe('95.50')->and($this->item->currency)->toBe('PHP');
 });
 
 test('item updates support upload method spoofing and clean up replaced photos', function () {
@@ -96,7 +105,7 @@ test('invalid catalog values are rejected', function (array $invalid) {
 })->with([
     [['type' => 'invalid']], [['name' => '']], [['price' => '-1', 'currency' => 'PHP']],
     [['price' => '10.123', 'currency' => 'PHP']], [['price' => '100', 'price_max' => '80', 'currency' => 'PHP']],
-    [['price_max' => '80']], [['price' => '80']], [['price' => '80', 'currency' => 'invalid']],
+    [['price_max' => '80']], [['price' => '80', 'currency' => 'USD']], [['price' => '80', 'currency' => 'EUR']], [['price' => '80', 'currency' => 'invalid']],
     [['photo' => 'another-owner.jpg']],
 ]);
 
@@ -189,7 +198,7 @@ test('registration saves draft items together with the new listing', function ()
         'lat' => 14.6, 'lng' => 121, 'hours' => ['monday' => ['open' => '09:00', 'close' => '18:00', 'closed' => false]],
         'cover_photo' => UploadedFile::fake()->image('cover.jpg'),
         'offerings' => [
-            ['type' => 'service', 'name' => 'Wash', 'photo' => UploadedFile::fake()->image('wash.jpg'), 'price' => '80', 'price_max' => '120', 'currency' => 'PHP'],
+            ['type' => 'service', 'name' => 'Wash', 'photo' => UploadedFile::fake()->image('wash.jpg'), 'price' => '80', 'price_max' => '120'],
             ['type' => 'product', 'name' => 'Bag'],
         ],
     ])->assertSessionHasNoErrors()->assertRedirect(route('explorer.index'));
@@ -197,9 +206,22 @@ test('registration saves draft items together with the new listing', function ()
     $created = Business::where('slug', 'new-shop')->firstOrFail();
     expect($created->offerings)->toHaveCount(2);
     $priced = $created->offerings->firstWhere('name', 'Wash');
-    expect($priced->price)->toBe('80.00')->and($priced->price_max)->toBe('120.00');
+    expect($priced->price)->toBe('80.00')->and($priced->price_max)->toBe('120.00')
+        ->and($priced->currency)->toBe('PHP');
     Storage::disk('public')->assertExists($priced->photo);
     expect($created->offerings->firstWhere('name', 'Bag')->price)->toBeNull();
+});
+
+test('registration rejects foreign currencies in draft items', function () {
+    $this->actingAs($this->owner)->post(route('owner.businesses.store'), [
+        'category_id' => $this->category->id, 'name' => 'Foreign currency shop',
+        'description' => 'A neighborhood shop.', 'address' => 'Sample Street',
+        'lat' => 14.6, 'lng' => 121, 'hours' => ['monday' => ['open' => '09:00', 'close' => '18:00', 'closed' => false]],
+        'cover_photo' => UploadedFile::fake()->image('cover.jpg'),
+        'offerings' => [['type' => 'product', 'name' => 'Bag', 'price' => '100', 'currency' => 'USD']],
+    ])->assertSessionHasErrors('offerings.0.currency');
+
+    $this->assertDatabaseMissing('businesses', ['name' => 'Foreign currency shop']);
 });
 
 test('invalid draft items do not create a listing or upload its photos', function () {

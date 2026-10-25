@@ -9,7 +9,6 @@ import { photoUrl } from '@/utils/businesses';
 const props = defineProps<{
     businessId: number | null;
     item: BusinessOffering | BusinessOfferingDraft | null;
-    currencies: string[];
 }>();
 
 const emit = defineEmits<{
@@ -32,7 +31,6 @@ const form = useForm({
     remove_photo: item && 'remove_photo' in item ? item.remove_photo : false,
     price: item?.price ?? '',
     price_max: item?.price_max ?? '',
-    currency: item?.currency ?? 'PHP',
     price_unit: item?.price_unit ?? '',
     _method: item ? 'PUT' : 'POST',
 });
@@ -117,7 +115,7 @@ function handleSubmit() {
             remove_photo: form.remove_photo,
             price: form.price === '' ? null : String(form.price),
             price_max: form.price_max === '' ? null : String(form.price_max),
-            currency: form.price === '' ? null : form.currency,
+            currency: form.price === '' ? null : 'PHP',
             price_unit: form.price_unit || null,
         });
 
@@ -318,7 +316,7 @@ function handleSave() {
                         <label
                             for="offering-price"
                             class="mb-2 block text-[11px] font-semibold"
-                            >Amount / from</label
+                            >Amount / from (₱)</label
                         >
                         <input
                             id="offering-price"
@@ -341,7 +339,7 @@ function handleSave() {
                         <label
                             for="offering-price-max"
                             class="mb-2 block text-[11px] font-semibold"
-                            >Up to
+                            >Up to (₱)
                             <span class="font-normal text-slate-400"
                                 >Optional</span
                             ></label
@@ -364,39 +362,7 @@ function handleSave() {
                         </p>
                     </div>
                 </div>
-                <div
-                    v-if="hasPrice"
-                    class="grid grid-cols-[100px_minmax(0,1fr)] gap-4"
-                >
-                    <div>
-                        <label
-                            for="offering-currency"
-                            class="mb-2 block text-[11px] font-semibold"
-                            >Currency
-                            <span class="text-red-500" aria-hidden="true"
-                                >*</span
-                            ></label
-                        >
-                        <select
-                            id="offering-currency"
-                            v-model="form.currency"
-                            class="h-11 w-full rounded-xl border border-explorer-line bg-explorer-cloud px-3 text-xs"
-                        >
-                            <option
-                                v-for="currency in currencies"
-                                :key="currency"
-                                :value="currency"
-                            >
-                                {{ currency }}
-                            </option>
-                        </select>
-                        <p
-                            v-if="form.errors.currency"
-                            class="mt-1 text-[11px] text-red-600"
-                        >
-                            {{ form.errors.currency }}
-                        </p>
-                    </div>
+                <div v-if="hasPrice">
                     <div>
                         <label
                             for="offering-unit"

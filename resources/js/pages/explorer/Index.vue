@@ -35,7 +35,6 @@ const props = withDefaults(
     defineProps<{
         categories?: Category[];
         discoveryShortcuts?: DiscoveryShortcut[];
-        offeringCurrencies?: string[];
         myBusinesses?: Business[];
         ownerInsights?: Record<number, BusinessInsights>;
         ownerPagination?: OwnerListingPagination;
@@ -48,7 +47,6 @@ const props = withDefaults(
     {
         categories: () => [],
         discoveryShortcuts: () => [],
-        offeringCurrencies: () => [],
         myBusinesses: () => [],
         ownerInsights: () => ({}),
         ownerPagination: () => ({
@@ -935,7 +933,6 @@ onUnmounted(() => {
             v-if="drawerOpen && owner"
             :listing="editing"
             :initial-step="drawerStep"
-            :currencies="offeringCurrencies"
             :initial-location="userLocation"
             :categories="categories"
             @close="handleCloseDrawer"

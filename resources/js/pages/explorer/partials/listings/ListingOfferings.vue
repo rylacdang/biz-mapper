@@ -14,7 +14,6 @@ import { latestRequest } from '@/utils/requests';
 
 const props = defineProps<{
     businessId: number | null;
-    currencies: string[];
 }>();
 const drafts = defineModel<BusinessOfferingDraft[]>({ required: true });
 const emit = defineEmits<{
@@ -195,7 +194,6 @@ watch([editorOpen, removing], () =>
         <OfferingForm
             :business-id="businessId"
             :item="editing"
-            :currencies="currencies"
             @saved="handleSaved"
             @cancel="handleCancel"
             @busy="saving = $event"
