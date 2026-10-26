@@ -28,6 +28,8 @@ export function useCityMap(
     const userMarkerElement = shallowRef<HTMLElement>();
 
     const ready = ref(false);
+    const loadingTiles = ref(false);
+    let loadingTimer: ReturnType<typeof setTimeout> | undefined;
     const error = ref('');
     const is3d = ref(true);
 
@@ -68,6 +70,32 @@ export function useCityMap(
         return ctx.getImageData(0, 0, 88, 104);
     }
 
+    // Tile loading continues after setup, including whenever the camera moves.
+    function updateTileLoading() {
+        if (!map || disposed) {
+            return;
+        }
+
+        if (map.areTilesLoaded()) {
+            clearTimeout(loadingTimer);
+            loadingTimer = undefined;
+            loadingTiles.value = false;
+
+            return;
+        }
+
+        if (!loadingTiles.value && loadingTimer === undefined) {
+            // Avoid flashing a status message for tiles already in the browser cache.
+            loadingTimer = setTimeout(() => {
+                loadingTimer = undefined;
+
+                if (!disposed && map) {
+                    loadingTiles.value = !map.areTilesLoaded();
+                }
+            }, 250);
+        }
+    }
+
     function init(
         container: HTMLElement,
         center: Coordinates,
@@ -86,6 +114,8 @@ export function useCityMap(
                 bearing: -18,
                 maxPitch: 65,
                 attributionControl: { compact: true },
+                // Keep loading coarser tiles so zooming can fill gaps progressively.
+                cancelPendingTileRequestsWhileZooming: false,
             });
             // Start mobile credits collapsed; the native info button keeps every link accessible.
             const collapseMobileCredits = () => {
@@ -100,13 +130,19 @@ export function useCityMap(
             };
             map.once('load', collapseMobileCredits);
             map.on('resize', collapseMobileCredits);
+            map.on('sourcedataloading', updateTileLoading);
+            map.on('sourcedata', updateTileLoading);
+            map.on('sourcedataabort', updateTileLoading);
+            map.on('idle', updateTileLoading);
             resize = new ResizeObserver(() => map?.resize());
             resize.observe(container);
             map.on('error', () => {
+                updateTileLoading();
                 error.value =
                     'Some map tiles couldn’t load. You can still browse places.';
             });
             map.on('moveend', () => {
+                updateTileLoading();
                 const current = map?.getCenter();
 
                 if (current) {
@@ -262,6 +298,7 @@ export function useCityMap(
                     });
                 });
                 ready.value = true;
+                updateTileLoading();
                 updateUserAccuracy();
                 done();
             });
@@ -291,6 +328,19 @@ export function useCityMap(
     }
 
     function moveCenter(center: Coordinates) {
+        const current = map?.getCenter();
+        const padding = map?.getPadding();
+
+        if (
+            !current ||
+            (Math.abs(current.lat - center.lat) < 0.0000001 &&
+                Math.abs(current.lng - center.lng) < 0.0000001 &&
+                padding &&
+                Object.values(padding).every((value) => value === 0))
+        ) {
+            return;
+        }
+
         map?.jumpTo({
             center: [center.lng, center.lat],
             padding: { left: 0, right: 0, top: 0, bottom: 0 },
@@ -323,7 +373,7 @@ export function useCityMap(
                 top: 88,
                 bottom: mobile && panelVisible ? window.innerHeight * 0.46 : 72,
             },
-            duration: reduced() ? 0 : 650,
+            duration: !ready.value || reduced() ? 0 : 650,
         });
     }
 
@@ -597,6 +647,7 @@ export function useCityMap(
 
     onUnmounted(() => {
         disposed = true;
+        clearTimeout(loadingTimer);
         resize?.disconnect();
         userMarker?.remove();
         map?.remove();
@@ -605,6 +656,7 @@ export function useCityMap(
     return {
         init,
         ready,
+        loadingTiles,
         error,
         is3d,
         userMarkerElement,

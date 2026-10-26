@@ -34,6 +34,10 @@
         <link rel="icon" href="/img/biz-mapper.png?v=3" type="image/png">
         <link rel="apple-touch-icon" href="/img/biz-mapper.png?v=3">
 
+        @if (($page['component'] ?? null) === 'explorer/Index')
+            <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+        @endif
+
         @fonts
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])

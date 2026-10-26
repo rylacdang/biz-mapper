@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Compass, LocateFixed, Minus, Plus, Layers } from 'lucide-vue-next';
+import {
+    Compass,
+    LocateFixed,
+    Minus,
+    Plus,
+    Layers,
+    LoaderCircle,
+} from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useCityMap } from '@/composables/useCityMap';
 import { useExplorerLocation } from '@/composables/useExplorerLocation';
@@ -49,7 +56,7 @@ const city = useCityMap(
     (id) => emit('select', id),
     (center) => emit('move', center),
 );
-const { ready, error, is3d, userMarkerElement } = city;
+const { ready, loadingTiles, error, is3d, userMarkerElement } = city;
 
 onMounted(() => {
     if (props.collectionView) {
@@ -229,12 +236,12 @@ onUnmounted(() => {
 
     <!-- Distinguish the discovery area from the device's location uncertainty -->
     <div
-        v-if="radius && ready"
+        v-if="ready && (radius || (loadingTiles && !error))"
         class="absolute top-20 right-4 z-2 flex flex-col gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-[11px] text-slate-600 shadow-sm max-md:right-auto max-md:left-3 max-md:text-[10px]"
         :class="{ 'max-md:top-36': moved }"
         aria-label="Map circle legend"
     >
-        <span class="flex items-center gap-2">
+        <span v-if="radius" class="flex items-center gap-2">
             <span
                 class="size-2.5 rounded-full border-2 border-blue-600 bg-blue-100"
                 aria-hidden="true"
@@ -242,12 +249,28 @@ onUnmounted(() => {
             {{ formatDistance(radius.radius) }} search area
         </span>
 
-        <span v-if="userMarkerElement" class="flex items-center gap-2">
+        <span
+            v-if="radius && userMarkerElement"
+            class="flex items-center gap-2"
+        >
             <span
                 class="size-2.5 rounded-full border border-dashed border-amber-600 bg-amber-100"
                 aria-hidden="true"
             ></span>
             GPS accuracy · {{ Math.round(accuracy) }} m
+        </span>
+
+        <span
+            v-if="loadingTiles && !error"
+            class="flex items-center gap-2 text-explorer-blue"
+            role="status"
+        >
+            <LoaderCircle
+                :size="12"
+                class="motion-safe:animate-spin"
+                aria-hidden="true"
+            />
+            Loading map details&hellip;
         </span>
     </div>
 
