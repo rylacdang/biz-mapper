@@ -7,11 +7,15 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 abstract class CacheBaseRepository implements BaseRepositoryInterface
 {
-    protected int $ttl = 3600;
+    protected int $ttl = 60;
+
+    protected array $relatedTags = [];
 
     public function __construct(
         protected readonly BaseRepositoryInterface $eloquentRepo,
@@ -25,7 +29,6 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
 
     public function paginate(int $perPage = 10): LengthAwarePaginator
     {
-        // Pagination bypassed (dynamic parameters not safely cacheable)
         return $this->eloquentRepo->paginate($perPage);
     }
 
@@ -38,7 +41,7 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
     {
         $model = $this->eloquentRepo->create($data);
 
-        $this->flush();
+        $this->invalidate();
 
         return $model;
     }
@@ -47,7 +50,7 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
     {
         $updated = $this->eloquentRepo->update($id, $data);
 
-        $this->flush();
+        $this->invalidate();
 
         return $updated;
     }
@@ -56,7 +59,7 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
     {
         $deleted = $this->eloquentRepo->delete($id);
 
-        $this->flush();
+        $this->invalidate();
 
         return $deleted;
     }
@@ -66,35 +69,51 @@ abstract class CacheBaseRepository implements BaseRepositoryInterface
         return $this->eloquentRepo->query();
     }
 
-    /**
-     * Cache remember helper utilizing Redis tags.
-     */
-    protected function remember(string $key, callable $callback)
+    public function invalidate(): void
     {
-        return Cache::tags([$this->cacheTag])->remember(
-            $key,
-            $this->ttl,
-            $callback
-        );
-    }
+        if (DB::connection()->transactionLevel() > 0) {
+            DB::afterCommit(fn () => $this->flush());
 
-    /**
-     * Cache forget helper utilizing Redis tags.
-     */
-    protected function forget(string|array $keys): void
-    {
-        $cache = Cache::tags([$this->cacheTag]);
-
-        foreach ((array) $keys as $key) {
-            $cache->forget($key);
+            return;
         }
+
+        $this->flush();
     }
 
     /**
-     * Flush cache tag.
+     * Keep keys distinct for every argument, including exact coordinates.
+     */
+    protected function key(string $method, array $arguments): string
+    {
+        return $method.':'.hash('sha256', serialize($arguments));
+    }
+
+    /**
+     * Cache isolated snapshots and never publish uncommitted database reads.
+     */
+    protected function remember(string $key, callable $callback): mixed
+    {
+        if (DB::connection()->transactionLevel() > 0) {
+            return $callback();
+        }
+
+        $cache = Cache::tags([$this->cacheTag]);
+        $key = $cache->getTags()->getNamespace().':'.$key;
+        $snapshot = $cache->remember($key, $this->ttl, fn () => serialize($callback()));
+        $result = unserialize($snapshot);
+
+        if ($result instanceof LengthAwarePaginator) {
+            $result->withPath(Paginator::resolveCurrentPath());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Evict this repository and cached data that embeds its records.
      */
     protected function flush(): void
     {
-        Cache::tags([$this->cacheTag])->flush();
+        Cache::tags([$this->cacheTag, ...$this->relatedTags])->flush();
     }
 }

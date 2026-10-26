@@ -10,9 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class BusinessCacheRepository extends CacheBaseRepository implements BusinessRepositoryInterface
 {
-    public function __construct(
-        BusinessRepositoryInterface $eloquentRepo
-    ) {
+    protected array $relatedTags = ['saved_businesses', 'place_collections', 'notifications', 'reviews', 'business_offerings', 'review_summaries'];
+
+    public function __construct(BusinessRepositoryInterface $eloquentRepo)
+    {
         parent::__construct($eloquentRepo, 'businesses');
     }
 
@@ -26,21 +27,24 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
         return $this->eloquentRepo->getOwnerInsights($ownerId, $businessIds);
     }
 
+    public function findBySlugWithCategoryOrFail(string $slug): Business
+    {
+        return $this->remember(
+            $this->key('findBySlugWithCategoryOrFail', [$slug]),
+            fn () => $this->eloquentRepo->findBySlugWithCategoryOrFail($slug),
+        );
+    }
+
     public function getSlugPatternCount(string $slug): int
     {
         return $this->eloquentRepo->getSlugPatternCount($slug);
     }
 
-    public function findBySlugWithCategoryOrFail(string $slug): Business
-    {
-        return $this->eloquentRepo->findBySlugWithCategoryOrFail($slug);
-    }
-
     public function getAllWithCategory(): Collection
     {
         return $this->remember(
-            'all_with_category',
-            fn () => $this->eloquentRepo->getAllWithCategory()
+            $this->key('getAllWithCategory', []),
+            fn () => $this->eloquentRepo->getAllWithCategory(),
         );
     }
 
@@ -52,8 +56,8 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
     public function getByCategoryWithCategory(string $categoryName): Collection
     {
         return $this->remember(
-            "category.{$categoryName}.businesses",
-            fn () => $this->eloquentRepo->getByCategoryWithCategory($categoryName)
+            $this->key('getByCategoryWithCategory', [$categoryName]),
+            fn () => $this->eloquentRepo->getByCategoryWithCategory($categoryName),
         );
     }
 
@@ -69,22 +73,28 @@ class BusinessCacheRepository extends CacheBaseRepository implements BusinessRep
 
     public function restoreBusiness(int|string $id): bool
     {
-        $restored = $this->eloquentRepo->restoreBusiness($id);
+        $result = $this->eloquentRepo->restoreBusiness($id);
 
-        if ($restored) {
-            $this->flush();
+        if ($result) {
+            $this->invalidate();
         }
 
-        return $restored;
+        return $result;
     }
 
     public function searchByRadius(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null, int $page = 1): LengthAwarePaginator
     {
-        return $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category, $page);
+        return $this->remember(
+            $this->key('searchByRadius', [$latitude, $longitude, $radius, $keyword, $category, $page]),
+            fn () => $this->eloquentRepo->searchByRadius($latitude, $longitude, $radius, $keyword, $category, $page),
+        );
     }
 
     public function getNearbyMarkers(float $latitude, float $longitude, float $radius, ?string $keyword = null, string|array|null $category = null): Collection
     {
-        return $this->eloquentRepo->getNearbyMarkers($latitude, $longitude, $radius, $keyword, $category);
+        return $this->remember(
+            $this->key('getNearbyMarkers', [$latitude, $longitude, $radius, $keyword, $category]),
+            fn () => $this->eloquentRepo->getNearbyMarkers($latitude, $longitude, $radius, $keyword, $category),
+        );
     }
 }
