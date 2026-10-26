@@ -30,9 +30,9 @@
             }
         </style>
 
-        <link rel="icon" href="/img/biz-mapper.ico" type="image/x-icon">
-        <link rel="icon" href="/img/biz-mapper.png" type="image/png">
-        <link rel="apple-touch-icon" href="/img/biz-mapper.png">
+        <link rel="icon" href="/img/biz-mapper.ico?v=3" type="image/x-icon">
+        <link rel="icon" href="/img/biz-mapper.png?v=3" type="image/png">
+        <link rel="apple-touch-icon" href="/img/biz-mapper.png?v=3">
 
         @fonts
 

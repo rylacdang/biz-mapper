@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, FolderHeart, Globe2, MapPin } from 'lucide-vue-next';
 import { onUnmounted, ref } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import BusinessResults from '@/components/businesses/BusinessResults.vue';
 import { show as businessShow } from '@/routes/businesses';
 import { show } from '@/routes/collections';
@@ -80,10 +81,7 @@ onUnmounted(() => cancel?.());
                     :href="index.url()"
                     aria-label="BizMapper home"
                     class="flex items-center gap-2 font-explorer-heading text-lg font-bold"
-                    ><span
-                        class="grid size-9 place-items-center rounded-xl bg-explorer-blue text-white"
-                        ><MapPin :size="20" /></span
-                    ><span
+                    ><AppLogoIcon class="size-9 shrink-0 object-contain" /><span
                         >biz<span class="text-explorer-blue">mapper</span></span
                     ></Link
                 >

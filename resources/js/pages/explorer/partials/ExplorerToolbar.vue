@@ -2,7 +2,6 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Bookmark,
-    MapPin,
     Search,
     SlidersHorizontal,
     UserRound,
@@ -11,6 +10,7 @@ import {
     List,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NotificationBell from '@/components/NotificationBell.vue';
 import { login, logout, register } from '@/routes';
 
@@ -76,11 +76,7 @@ function handleCreateListing() {
             'max-md:px-0',
         ]"
     >
-        <span
-            class="grid size-8 place-items-center rounded-xl bg-explorer-blue text-white"
-        >
-            <MapPin :size="20" />
-        </span>
+        <AppLogoIcon class="size-8 shrink-0 object-contain" />
 
         <span
             class="flex font-explorer-heading text-lg font-bold tracking-tight max-md:hidden"

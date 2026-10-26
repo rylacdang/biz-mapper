@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowUpRight, MapPin, Store } from 'lucide-vue-next';
+import { ArrowLeft, ArrowUpRight, Store } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessGallery from '@/components/businesses/BusinessGallery.vue';
@@ -100,11 +101,7 @@ const carouselItems = computed(() =>
                     class="flex items-center gap-2.5 font-explorer-heading text-lg font-bold tracking-tight"
                     aria-label="BizMapper home"
                 >
-                    <span
-                        class="grid size-9 place-items-center rounded-xl bg-explorer-blue text-white"
-                    >
-                        <MapPin :size="22" />
-                    </span>
+                    <AppLogoIcon class="size-9 shrink-0 object-contain" />
                     <span
                         >biz<span class="text-explorer-blue">mapper</span></span
                     >
