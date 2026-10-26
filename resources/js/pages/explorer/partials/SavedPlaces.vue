@@ -7,6 +7,7 @@ import Collections from '@/pages/explorer/partials/Collections.vue';
 import { index } from '@/routes/consumer/saved-places';
 import type {
     SavedPlaceChange,
+    CollectionBrowseContext,
     SavedPlacesPage,
     SearchBusiness,
 } from '@/types';
@@ -14,10 +15,32 @@ import { latestRequest } from '@/utils/requests';
 
 const emit = defineEmits<{
     select: [business: SearchBusiness];
-    collectionChange: [places: SearchBusiness[] | null];
+    collectionChange: [
+        places: SearchBusiness[] | null,
+        context?: CollectionBrowseContext,
+    ];
     showMap: [places: SearchBusiness[]];
 }>();
 const showingCollections = ref(false);
+const collectionList = ref<InstanceType<typeof Collections>>();
+
+function handleCollectionChange(
+    places: SearchBusiness[] | null,
+    context?: CollectionBrowseContext,
+) {
+    emit('collectionChange', places, context);
+}
+
+async function loadCollectionPage(target: number) {
+    return (await collectionList.value?.loadPage(target)) ?? null;
+}
+
+function cancelCollectionLoad() {
+    collectionList.value?.cancelLoad();
+}
+
+defineExpose({ loadCollectionPage, cancelCollectionLoad });
+
 function handleShowSaved() {
     showingCollections.value = false;
     emit('collectionChange', null);
@@ -151,8 +174,9 @@ onUnmounted(() => {
 
         <Collections
             v-if="showingCollections"
+            ref="collectionList"
             @select="emit('select', $event)"
-            @change="emit('collectionChange', $event)"
+            @change="handleCollectionChange"
             @show-map="emit('showMap', $event)"
         />
 

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowUpRight } from 'lucide-vue-next';
+import {
+    ArrowLeft,
+    ArrowUpRight,
+    ChevronLeft,
+    ChevronRight,
+} from 'lucide-vue-next';
 import BusinessActions from '@/components/businesses/BusinessActions.vue';
 import BusinessContact from '@/components/businesses/BusinessContact.vue';
 import BusinessHours from '@/components/businesses/BusinessHours.vue';
@@ -14,7 +19,7 @@ import {
 } from '@/components/ui/tooltip';
 import WalkingDirections from '@/pages/explorer/partials/WalkingDirections.vue';
 import { show } from '@/routes/businesses';
-import type { SearchBusiness } from '@/types';
+import type { SearchBusiness, CollectionPlaceNavigation } from '@/types';
 import type { WalkingRoute } from '@/types/routing';
 
 defineProps<{
@@ -22,9 +27,16 @@ defineProps<{
     route: WalkingRoute | null;
     routing: boolean;
     routeError: string;
+    collection?: CollectionPlaceNavigation | null;
 }>();
 
-const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
+const emit = defineEmits<{
+    back: [];
+    directions: [];
+    clearRoute: [];
+    collectionStep: [direction: -1 | 1];
+    collectionRetry: [];
+}>();
 </script>
 
 <template>
@@ -35,8 +47,73 @@ const emit = defineEmits<{ back: []; directions: []; clearRoute: [] }>();
             @click="emit('back')"
         >
             <ArrowLeft :size="16" />
-            Back to places
+            {{ collection ? 'Back to collection' : 'Back to places' }}
         </button>
+
+        <nav
+            v-if="collection"
+            aria-label="Collection places"
+            tabindex="-1"
+            class="mb-4 rounded-xl border border-explorer-line bg-explorer-cloud p-3 outline-none"
+            :aria-busy="collection.loading"
+        >
+            <p
+                class="truncate text-[11px] font-semibold"
+                :title="collection.name"
+            >
+                {{ collection.name }}
+            </p>
+            <div class="mt-2 flex items-center justify-between gap-2">
+                <button
+                    type="button"
+                    data-collection-step="-1"
+                    aria-label="Previous place"
+                    :disabled="!collection.hasPrevious || collection.loading"
+                    class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line bg-white px-2 text-[11px] font-semibold text-explorer-blue hover:border-explorer-blue disabled:cursor-not-allowed disabled:opacity-40"
+                    @click="emit('collectionStep', -1)"
+                >
+                    <ChevronLeft :size="13" /> Previous
+                </button>
+                <span
+                    aria-live="polite"
+                    aria-atomic="true"
+                    class="text-center text-[10px] text-slate-500"
+                >
+                    {{
+                        collection.loading
+                            ? 'Loading…'
+                            : collection.position +
+                              ' of ' +
+                              collection.total +
+                              (collection.total === 1 ? ' place' : ' places')
+                    }}
+                </span>
+                <button
+                    type="button"
+                    data-collection-step="1"
+                    aria-label="Next place"
+                    :disabled="!collection.hasNext || collection.loading"
+                    class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line bg-white px-2 text-[11px] font-semibold text-explorer-blue hover:border-explorer-blue disabled:cursor-not-allowed disabled:opacity-40"
+                    @click="emit('collectionStep', 1)"
+                >
+                    Next <ChevronRight :size="13" />
+                </button>
+            </div>
+            <p
+                v-if="collection.error"
+                role="alert"
+                class="mt-2 text-[11px] leading-5 text-red-600"
+            >
+                {{ collection.error }}
+                <button
+                    type="button"
+                    class="ml-1 h-9 font-semibold underline"
+                    @click="emit('collectionRetry')"
+                >
+                    Retry
+                </button>
+            </p>
+        </nav>
 
         <BusinessIdentity :place="place">
             <template #actions>

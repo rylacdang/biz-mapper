@@ -39,6 +39,7 @@ import {
 } from '@/routes/consumer/collections/places';
 import type {
     CollectionsPage,
+    CollectionBrowseContext,
     CollectionPlacesPage,
     CollectionPlace,
     PlaceCollection,
@@ -50,7 +51,10 @@ import { latestRequest } from '@/utils/requests';
 
 const emit = defineEmits<{
     select: [place: SearchBusiness];
-    change: [places: SearchBusiness[] | null];
+    change: [
+        places: SearchBusiness[] | null,
+        context?: CollectionBrowseContext,
+    ];
     showMap: [places: SearchBusiness[]];
 }>();
 
@@ -119,7 +123,13 @@ async function load(target = 1) {
                 ...(result as CollectionPlacesPage).collection,
                 places_count: result.meta.total,
             };
-            emit('change', places.value.data);
+            emit('change', places.value.data, {
+                id: selected.value.id,
+                name: selected.value.name,
+                pagination: places.value.meta,
+            });
+
+            return places.value;
         } else {
             collections.value = result as CollectionsPage;
         }
@@ -133,6 +143,15 @@ async function load(target = 1) {
         }
     }
 }
+
+// The explorer can cross a page boundary without duplicating this loader.
+function cancelLoad() {
+    requests.cancel();
+    loading.value = false;
+    currentPage = places.value?.meta.current_page ?? 1;
+}
+
+defineExpose({ loadPage: load, cancelLoad });
 
 function handleOpen(collection: PlaceCollection) {
     selected.value = collection;
@@ -497,8 +516,8 @@ onUnmounted(() => {
                 v-if="selected"
                 class="mt-3 text-[10px] leading-5 text-slate-400"
             >
-                The map shows this page's places. Unavailable businesses are
-                hidden.
+                Choose a place to explore this collection one stop at a time.
+                Unavailable businesses are hidden.
             </p>
             <p
                 v-if="notice"

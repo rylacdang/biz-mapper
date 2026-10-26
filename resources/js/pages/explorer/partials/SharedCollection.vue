@@ -26,6 +26,7 @@ const emit = defineEmits<{
                 ><Globe2 :size="12" /> Public collection</span
             >
             <h2
+                tabindex="-1"
                 class="mt-3 font-explorer-heading text-base font-semibold break-words"
             >
                 {{ collection.name }}
@@ -33,7 +34,7 @@ const emit = defineEmits<{
             <p class="mt-2 text-[11px] leading-6 text-slate-500">
                 {{ places.meta.total }} available
                 {{ places.meta.total === 1 ? 'place' : 'places' }}. The map
-                shows the current page.
+                shows the current page. Select a place to start exploring.
             </p>
             <div class="mt-3 flex gap-2">
                 <button

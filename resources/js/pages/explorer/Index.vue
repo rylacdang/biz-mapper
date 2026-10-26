@@ -29,6 +29,8 @@ import type {
     SavedPlaceChange,
     PublicCollection,
     PublicCollectionPlacesPage,
+    CollectionBrowseContext,
+    CollectionPlaceNavigation,
 } from '@/types';
 
 // Page data and discovery state
@@ -79,6 +81,13 @@ const sharedError = ref('');
 let sharedRequestedPage = props.sharedPlaces?.meta.current_page ?? 1;
 let cancelSharedVisit: (() => void) | undefined;
 const collectionPlaces = ref<SearchBusiness[] | null>(null);
+const collectionContext = ref<CollectionBrowseContext | null>(null);
+const savedPlacesPanel = ref<InstanceType<typeof SavedPlaces>>();
+const collectionStepLoading = ref(false);
+const collectionStepError = ref('');
+let collectionStepRevision = 0;
+let lastCollectionStep: -1 | 1 = 1;
+let sharedPageRevision = 0;
 const collectionFocus = ref<Coordinates[] | null>(null);
 const activeCollectionPlaces = computed(() =>
     sharedView.value
@@ -130,6 +139,142 @@ const {
     handleExpandSheet,
     handleCollapseSheet,
 } = useExplorerPanel(workspace);
+
+const collectionPagination = computed(() =>
+    sharedView.value
+        ? props.sharedPlaces?.meta
+        : collectionContext.value?.pagination,
+);
+const collectionSource = computed(() => {
+    if (!showingCollection.value) {
+        return null;
+    }
+
+    return sharedView.value
+        ? 'public:' + props.sharedCollection?.share_token
+        : 'private:' +
+              page.props.auth?.user?.id +
+              ':' +
+              collectionContext.value?.id;
+});
+const collectionPlaceIndex = computed(() =>
+    activeCollectionPlaces.value.findIndex(
+        (place) => place.id === selected.value?.id,
+    ),
+);
+const collectionNavigation = computed<CollectionPlaceNavigation | null>(() => {
+    const meta = collectionPagination.value;
+    const index = collectionPlaceIndex.value;
+
+    if (!showingCollection.value || !meta || index < 0) {
+        return null;
+    }
+
+    const position = (meta.current_page - 1) * meta.per_page + index + 1;
+
+    return {
+        name: sharedView.value
+            ? (props.sharedCollection?.name ?? '')
+            : (collectionContext.value?.name ?? ''),
+        position,
+        total: meta.total,
+        hasPrevious: position > 1,
+        hasNext: position < meta.total,
+        loading: collectionStepLoading.value,
+        error: collectionStepError.value,
+    };
+});
+
+function cancelCollectionStep() {
+    collectionStepRevision++;
+    collectionStepError.value = '';
+
+    if (collectionStepLoading.value) {
+        savedPlacesPanel.value?.cancelCollectionLoad();
+        cancelSharedVisit?.();
+    }
+
+    collectionStepLoading.value = false;
+}
+
+watch(collectionSource, cancelCollectionStep);
+
+async function handleCollectionStep(direction: -1 | 1) {
+    const navigation = collectionNavigation.value;
+    const meta = collectionPagination.value;
+
+    if (
+        !navigation ||
+        !meta ||
+        collectionStepLoading.value ||
+        (direction === -1 ? !navigation.hasPrevious : !navigation.hasNext)
+    ) {
+        return;
+    }
+
+    const revision = ++collectionStepRevision;
+    lastCollectionStep = direction;
+    collectionStepError.value = '';
+    const nextIndex = collectionPlaceIndex.value + direction;
+    let place: SearchBusiness | undefined =
+        activeCollectionPlaces.value[nextIndex];
+
+    if (!place) {
+        collectionStepLoading.value = true;
+        const target = meta.current_page + direction;
+        const result = sharedView.value
+            ? await handleSharedPage(target)
+            : await savedPlacesPanel.value?.loadCollectionPage(target);
+
+        await nextTick();
+
+        if (revision !== collectionStepRevision || !showingCollection.value) {
+            return;
+        }
+
+        collectionStepLoading.value = false;
+
+        if (!result) {
+            collectionStepError.value =
+                'Could not load this place. Please try again.';
+
+            return;
+        }
+
+        place = direction === 1 ? result.data[0] : result.data.at(-1);
+
+        if (!place) {
+            selected.value = null;
+
+            return;
+        }
+    }
+
+    handleSelectSavedBusiness(place, true);
+    await nextTick();
+
+    if (revision !== collectionStepRevision) {
+        return;
+    }
+
+    // Restore step-button focus after the panel's own focus handler has run.
+    requestAnimationFrame(() => {
+        if (revision !== collectionStepRevision) {
+            return;
+        }
+
+        const button = panelScroll.value?.querySelector<HTMLButtonElement>(
+            '[data-collection-step="' + direction + '"]',
+        );
+        const target =
+            button && !button.disabled
+                ? button
+                : panelScroll.value?.querySelector<HTMLElement>(
+                      '[aria-label="Collection places"]',
+                  );
+        target?.focus({ preventScroll: true });
+    });
+}
 
 const center = ref<Coordinates>(DEFAULT_CENTER);
 const userLocation = ref<Coordinates | null>(null);
@@ -239,6 +384,7 @@ async function handleSelectBusiness(id: number) {
 
 watch(panelOpen, (open) => {
     if (!open) {
+        cancelCollectionStep();
         searchState.cancelSelection();
     }
 });
@@ -315,13 +461,22 @@ function handleLocate(location: Coordinates) {
 }
 
 function handleBackToResults() {
+    cancelCollectionStep();
     selected.value = null;
 
-    if (savedView.value) {
+    if (showingCollection.value) {
+        collectionFocus.value = activeCollectionPlaces.value.map(
+            ({ lat, lng }) => ({ lat, lng }),
+        );
+    }
+
+    if (savedView.value || sharedView.value) {
         void nextTick(() => {
             panelScroll.value
                 ?.querySelector<HTMLElement>(
-                    '[aria-label="Your saved places"] h2',
+                    savedView.value
+                        ? '[aria-label="Your saved places"] h2'
+                        : '[aria-label="Shared collection"] h2',
                 )
                 ?.focus({ preventScroll: true });
         });
@@ -401,16 +556,33 @@ function handleCloseReviews() {
     void nextTick(() => reviewTrigger?.focus({ preventScroll: true }));
 }
 
-function handleSelectSavedBusiness(business: SearchBusiness) {
+function handleSelectSavedBusiness(business: SearchBusiness, browsing = false) {
+    if (!browsing) {
+        cancelCollectionStep();
+    }
+
     searchState.cancelSelection();
     selected.value = business;
     panelOpen.value = true;
     sheet.value = 'half';
 }
 
-function handleCollectionChange(places: SearchBusiness[] | null) {
+function handleCollectionChange(
+    places: SearchBusiness[] | null,
+    context?: CollectionBrowseContext,
+) {
     collectionPlaces.value = places;
+    collectionContext.value = context ?? null;
     collectionFocus.value = null;
+
+    if (
+        places &&
+        selected.value &&
+        !collectionStepLoading.value &&
+        !places.some((place) => place.id === selected.value?.id)
+    ) {
+        selected.value = null;
+    }
 }
 
 function handleShowCollectionMap(places: SearchBusiness[]) {
@@ -456,35 +628,57 @@ function handleSharedFailure() {
     return false;
 }
 
-function handleSharedPage(page: number) {
-    if (!props.sharedCollection) {
-        return;
-    }
+function handleSharedPage(
+    page: number,
+): Promise<PublicCollectionPlacesPage | null> {
+    return new Promise((resolve) => {
+        if (!props.sharedCollection) {
+            resolve(null);
 
-    sharedRequestedPage = page;
-    sharedLoading.value = true;
-    sharedError.value = '';
-    router.get(
-        explorerIndex.url(),
-        {
-            collection: props.sharedCollection.share_token,
-            collection_page: page,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            onCancelToken: (token) => {
-                cancelSharedVisit = () => token.cancel();
+            return;
+        }
+
+        cancelSharedVisit?.();
+        const revision = ++sharedPageRevision;
+        sharedRequestedPage = page;
+        sharedLoading.value = true;
+        sharedError.value = '';
+        const failed = () => {
+            if (revision === sharedPageRevision) {
+                handleSharedFailure();
+            }
+
+            resolve(null);
+
+            return false;
+        };
+
+        router.get(
+            explorerIndex.url(),
+            {
+                collection: props.sharedCollection.share_token,
+                collection_page: page,
             },
-            onError: handleSharedFailure,
-            onHttpException: handleSharedFailure,
-            onNetworkError: handleSharedFailure,
-            onFinish: () => {
-                sharedLoading.value = false;
-                cancelSharedVisit = undefined;
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onCancelToken: (token) => {
+                    cancelSharedVisit = () => token.cancel();
+                },
+                onSuccess: () => resolve(props.sharedPlaces ?? null),
+                onCancel: () => resolve(null),
+                onError: failed,
+                onHttpException: failed,
+                onNetworkError: failed,
+                onFinish: () => {
+                    if (revision === sharedPageRevision) {
+                        sharedLoading.value = false;
+                        cancelSharedVisit = undefined;
+                    }
+                },
             },
-        },
-    );
+        );
+    });
 }
 
 watch(
@@ -580,6 +774,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    cancelCollectionStep();
     removeNavigation();
     cancelSharedVisit?.();
     window.removeEventListener('saved-place-changed', handleSavedChange);
@@ -838,12 +1033,15 @@ onUnmounted(() => {
                 <BusinessDetails
                     v-else-if="selected"
                     :place="selected"
+                    :collection="collectionNavigation"
                     :route="walkingRoute"
                     :routing="routing"
                     :route-error="routeError"
                     @directions="handleDirections"
                     @clear-route="handleClearRoute"
                     @back="handleBackToResults"
+                    @collection-step="handleCollectionStep"
+                    @collection-retry="handleCollectionStep(lastCollectionStep)"
                 />
 
                 <SharedCollection
@@ -929,6 +1127,7 @@ onUnmounted(() => {
 
                 <SavedPlaces
                     v-if="savedView && consumer"
+                    ref="savedPlacesPanel"
                     v-show="!selected"
                     @select="handleSelectSavedBusiness"
                     @collection-change="handleCollectionChange"

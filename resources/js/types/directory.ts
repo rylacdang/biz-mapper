@@ -227,3 +227,19 @@ export interface ReviewHistoryPage {
     data: ReviewHistoryItem[];
     meta: SearchPagination;
 }
+
+export interface CollectionBrowseContext {
+    id: number;
+    name: string;
+    pagination: SearchPagination;
+}
+
+export interface CollectionPlaceNavigation {
+    name: string;
+    position: number;
+    total: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+    loading: boolean;
+    error: string;
+}
