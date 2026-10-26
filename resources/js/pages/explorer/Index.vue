@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Bookmark, ChevronDown, ChevronUp, Store, X } from 'lucide-vue-next';
+import { Bookmark, Store, X } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import BusinessResults from '@/components/businesses/BusinessResults.vue';
 import { useExplorerPanel } from '@/composables/useExplorerPanel';
@@ -136,8 +136,6 @@ const {
     handleClosePanel,
     handleSheetDragEnd,
     handleSheetDragStart,
-    handleExpandSheet,
-    handleCollapseSheet,
 } = useExplorerPanel(workspace);
 
 const collectionPagination = computed(() =>
@@ -855,24 +853,6 @@ onUnmounted(() => {
                 @pointerup="handleSheetDragEnd"
             >
                 <span class="h-1 w-9 rounded bg-[#dce4ef]"></span>
-
-                <div class="absolute right-3 flex gap-[3px]">
-                    <button
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5] max-md:h-[23px] max-md:w-[25px] max-md:bg-white"
-                        aria-label="Expand results"
-                        @click="handleExpandSheet"
-                    >
-                        <ChevronUp :size="16" />
-                    </button>
-
-                    <button
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border-0 bg-[#f3f6fb] text-[#768ba5] max-md:h-[23px] max-md:w-[25px] max-md:bg-white"
-                        aria-label="Collapse results"
-                        @click="handleCollapseSheet"
-                    >
-                        <ChevronDown :size="16" />
-                    </button>
-                </div>
             </div>
 
             <div

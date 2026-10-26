@@ -205,16 +205,16 @@ function handleCreateListing() {
     <nav
         v-if="!panelOpen"
         aria-label="Explore tools"
-        class="absolute bottom-6 left-4 z-4 flex gap-2 max-md:right-3 max-md:bottom-6 max-md:left-3"
+        class="absolute bottom-6 left-4 z-4 flex gap-2 max-md:right-14 max-md:bottom-[calc(24px+env(safe-area-inset-bottom))] max-md:left-3"
     >
         <button
-            class="flex h-12 items-center gap-2.5 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10"
+            class="flex h-12 items-center gap-2.5 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10 max-md:gap-1.5 max-md:px-2 max-md:text-[11px] max-md:whitespace-nowrap"
             @click="emit('explore')"
         >
             <List class="text-explorer-blue" :size="18" />
             Explore places
             <span
-                class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] text-slate-500"
+                class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] text-slate-500 max-md:px-1.5"
             >
                 {{ count }}
             </span>
@@ -222,7 +222,7 @@ function handleCreateListing() {
 
         <button
             v-if="owner"
-            class="flex h-12 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10"
+            class="flex h-12 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10 max-md:gap-1.5 max-md:px-2 max-md:text-[11px] max-md:whitespace-nowrap"
             @click="emit('listings')"
         >
             <Store :size="17" />
@@ -231,7 +231,7 @@ function handleCreateListing() {
 
         <button
             v-if="page.props.auth?.user?.role === 'consumer'"
-            class="flex h-12 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10"
+            class="flex h-12 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-semibold shadow-lg shadow-explorer-ink/10 max-md:gap-1.5 max-md:px-2 max-md:text-[11px] max-md:whitespace-nowrap"
             @click="handleOpenSaved"
         >
             <Bookmark :size="17" class="text-explorer-blue" /> Saved places

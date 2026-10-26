@@ -87,6 +87,19 @@ export function useCityMap(
                 maxPitch: 65,
                 attributionControl: { compact: true },
             });
+            // Start mobile credits collapsed; the native info button keeps every link accessible.
+            const collapseMobileCredits = () => {
+                if (window.innerWidth >= 768) {
+                    return;
+                }
+
+                const credits = container.querySelector<HTMLDetailsElement>(
+                    '.maplibregl-ctrl-attrib.maplibregl-compact-show[open]',
+                );
+                credits?.querySelector<HTMLElement>('summary')?.click();
+            };
+            map.once('load', collapseMobileCredits);
+            map.on('resize', collapseMobileCredits);
             resize = new ResizeObserver(() => map?.resize());
             resize.observe(container);
             map.on('error', () => {

@@ -218,8 +218,9 @@ onUnmounted(() => {
     <div
         ref="container"
         :class="[
-            'absolute! inset-0',
-            'max-md:group-data-[panel-open=true]/explorer:[&_.maplibregl-ctrl-bottom-right]:bottom-[43dvh]!',
+            'city-map-canvas absolute! inset-0',
+            'max-md:[&_.maplibregl-ctrl-bottom-right]:bottom-[calc(22px+env(safe-area-inset-bottom))]!',
+            'max-md:group-data-[panel-open=true]/explorer:[&_.maplibregl-ctrl-bottom-right]:bottom-[52dvh]!',
             'max-md:group-data-[panel-open=true]/explorer:group-data-[sheet=collapsed]/explorer:[&_.maplibregl-ctrl-bottom-right]:bottom-[100px]!',
             'max-md:group-data-[panel-open=true]/explorer:group-data-[sheet=expanded]/explorer:[&_.maplibregl-ctrl-bottom-right]:bottom-[calc(100dvh-88px)]!',
         ]"
@@ -229,7 +230,8 @@ onUnmounted(() => {
     <!-- Distinguish the discovery area from the device's location uncertainty -->
     <div
         v-if="radius && ready"
-        class="absolute top-20 right-4 z-2 flex flex-col gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-[11px] text-slate-600 shadow-sm max-md:right-16 max-md:text-[10px]"
+        class="absolute top-20 right-4 z-2 flex flex-col gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-[11px] text-slate-600 shadow-sm max-md:right-auto max-md:left-3 max-md:text-[10px]"
+        :class="{ 'max-md:top-36': moved }"
         aria-label="Map circle legend"
     >
         <span class="flex items-center gap-2">
@@ -359,3 +361,42 @@ onUnmounted(() => {
         </button>
     </nav>
 </template>
+
+<style scoped>
+@media (max-width: 767px) {
+    .city-map-canvas :deep(.maplibregl-ctrl-attrib) {
+        max-width: calc(100vw - 24px);
+        border-radius: 12px;
+        background: rgb(255 255 255 / 96%);
+        box-shadow: 0 2px 12px rgb(23 43 77 / 10%);
+    }
+
+    .city-map-canvas :deep(.maplibregl-ctrl-attrib.maplibregl-compact) {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+    }
+
+    .city-map-canvas :deep(.maplibregl-ctrl-attrib-button) {
+        width: 32px;
+        height: 32px;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .city-map-canvas :deep(.maplibregl-ctrl-attrib-inner) {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 12px);
+        width: min(320px, calc(100vw - 32px));
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 0 2px 12px rgb(23 43 77 / 10%);
+        font-size: 10px;
+        line-height: 18px;
+        text-align: left;
+        white-space: normal;
+    }
+}
+</style>
