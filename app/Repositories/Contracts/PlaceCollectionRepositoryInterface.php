@@ -18,9 +18,9 @@ interface PlaceCollectionRepositoryInterface extends BaseRepositoryInterface
     public function findPublicByTokenOrFail(string $token): PlaceCollection;
 
     /**
-     * Lock the collection while changing its stable sharing link.
+     * Lock the collection while changing sharing, membership, or order.
      */
-    public function lockForSharing(int $id): PlaceCollection;
+    public function lockForChanges(int $id): PlaceCollection;
 
     /**
      * Paginate public business fields without private saved-record attributes.
@@ -41,6 +41,11 @@ interface PlaceCollectionRepositoryInterface extends BaseRepositoryInterface
      * Add an authorized save without duplicate membership.
      */
     public function addPlace(int $collectionId, int $savedBusinessId): void;
+
+    /**
+     * Swap a member with the preceding or following available business.
+     */
+    public function movePlace(PlaceCollection $collection, int $savedBusinessId, string $direction): void;
 
     /**
      * Remove membership while keeping the original save.

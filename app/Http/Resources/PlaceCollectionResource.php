@@ -15,6 +15,7 @@ class PlaceCollectionResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'description' => $this->description,
             'is_public' => (bool) $this->is_public,
             'share_url' => $this->is_public && $this->share_token
                 ? route('collections.show', $this->share_token)

@@ -14,6 +14,7 @@ class PublicCollectionResource extends JsonResource
     {
         return [
             'name' => $this->name,
+            'description' => $this->description,
             'share_token' => $this->share_token,
             'places_count' => (int) $this->places_count,
             'url' => route('collections.show', $this->share_token),

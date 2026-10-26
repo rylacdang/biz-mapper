@@ -115,6 +115,7 @@ function handlePage(offset: number) {
                         <SaveBusinessButton :business="place" compact subtle />
                     </slot>
                 </div>
+                <slot name="footer" :place="place" />
             </article>
         </div>
 

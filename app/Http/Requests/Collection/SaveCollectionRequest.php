@@ -15,10 +15,13 @@ class SaveCollectionRequest extends FormRequest
     }
 
     /**
-     * Validate the name for both creation and renaming.
+     * Validate the collection's name and optional description.
      */
     public function rules(): array
     {
-        return ['name' => ['required', 'string', 'max:80']];
+        return [
+            'name' => ['required', 'string', 'max:80'],
+            'description' => ['nullable', 'string', 'max:500'],
+        ];
     }
 }

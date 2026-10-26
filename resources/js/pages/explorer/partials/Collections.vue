@@ -2,6 +2,9 @@
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    ArrowUp,
+    ArrowDown,
+    ListOrdered,
     Check,
     ChevronLeft,
     ChevronRight,
@@ -36,6 +39,7 @@ import {
     index as available,
     store as addPlace,
     destroy as removePlace,
+    update as movePlace,
 } from '@/routes/consumer/collections/places';
 import type {
     CollectionsPage,
@@ -75,9 +79,11 @@ const deleteOpen = ref(false);
 const pickerOpen = ref(false);
 const sharingOpen = ref(false);
 const heading = ref<HTMLElement>();
-const form = useForm({ name: '' });
+const form = useForm({ name: '', description: '' });
+const arranging = ref(false);
 const requests = latestRequest();
 const pickerRequests = latestRequest();
+const moveRequests = latestRequest();
 let editing = false;
 let dialogTrigger: HTMLElement | null = null;
 let cancelMutation: (() => void) | undefined;
@@ -117,17 +123,7 @@ async function load(target = 1) {
         currentPage = result.meta.current_page;
 
         if (collection) {
-            places.value = result as CollectionPlacesPage;
-            selected.value = {
-                ...collection,
-                ...(result as CollectionPlacesPage).collection,
-                places_count: result.meta.total,
-            };
-            emit('change', places.value.data, {
-                id: selected.value.id,
-                name: selected.value.name,
-                pagination: places.value.meta,
-            });
+            applyPlaces(result as CollectionPlacesPage, collection);
 
             return places.value;
         } else {
@@ -144,6 +140,24 @@ async function load(target = 1) {
     }
 }
 
+function applyPlaces(
+    result: CollectionPlacesPage,
+    collection: PlaceCollection,
+) {
+    places.value = result;
+    currentPage = result.meta.current_page;
+    selected.value = {
+        ...collection,
+        ...result.collection,
+        places_count: result.meta.total,
+    };
+    emit('change', result.data, {
+        id: selected.value.id,
+        name: selected.value.name,
+        pagination: result.meta,
+    });
+}
+
 // The explorer can cross a page boundary without duplicating this loader.
 function cancelLoad() {
     requests.cancel();
@@ -155,6 +169,7 @@ defineExpose({ loadPage: load, cancelLoad });
 
 function handleOpen(collection: PlaceCollection) {
     selected.value = collection;
+    arranging.value = false;
     places.value = null;
     notice.value = '';
     emit('change', []);
@@ -176,6 +191,7 @@ function handleName(event: MouseEvent, rename = false) {
     form.reset();
     form.clearErrors();
     form.name = rename ? (selected.value?.name ?? '') : '';
+    form.description = rename ? (selected.value?.description ?? '') : '';
     mutationError.value = '';
     nameOpen.value = true;
 }
@@ -207,7 +223,7 @@ function handleSaveName() {
 
             nameOpen.value = false;
             notice.value = editing
-                ? 'Collection renamed.'
+                ? 'Collection updated.'
                 : 'Collection created.';
             void load(editing ? currentPage : 1);
         },
@@ -219,6 +235,73 @@ function handleSaveName() {
         form.put(update.url(collection.id), options);
     } else {
         form.post(store.url(), options);
+    }
+}
+
+function placeNumber(place: SearchBusiness) {
+    if (!places.value) {
+        return 0;
+    }
+
+    return (
+        (places.value.meta.current_page - 1) * places.value.meta.per_page +
+        places.value.data.findIndex((member) => member.id === place.id) +
+        1
+    );
+}
+
+async function handleMove(place: CollectionPlace, direction: 'up' | 'down') {
+    const collection = selected.value;
+
+    if (!collection || busy.value || loading.value) {
+        return;
+    }
+
+    const request = moveRequests.start();
+    busy.value = true;
+    mutationError.value = '';
+    notice.value = '';
+
+    try {
+        const token = document.cookie
+            .split('; ')
+            .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+            ?.slice('XSRF-TOKEN='.length);
+        const response = await fetch(
+            movePlace.url([collection.id, place.saved_id]),
+            {
+                method: 'PUT',
+                credentials: 'same-origin',
+                signal: request.signal,
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                },
+                body: JSON.stringify({ direction, page: currentPage }),
+            },
+        );
+
+        if (!response.ok) {
+            throw new Error('Could not reorder collection');
+        }
+
+        const result = (await response.json()) as CollectionPlacesPage;
+
+        if (!request.isCurrent() || selected.value?.id !== collection.id) {
+            return;
+        }
+
+        applyPlaces(result, collection);
+    } catch {
+        if (request.isCurrent()) {
+            mutationError.value =
+                'Could not move this place. Please try again.';
+        }
+    } finally {
+        if (request.isCurrent()) {
+            busy.value = false;
+        }
     }
 }
 
@@ -391,6 +474,7 @@ onUnmounted(() => {
     active = false;
     requests.cancel();
     pickerRequests.cancel();
+    moveRequests.cancel();
     cancelMutation?.();
     form.cancel();
     window.removeEventListener('saved-place-changed', handleSavedChange);
@@ -475,8 +559,8 @@ onUnmounted(() => {
                     <button
                         type="button"
                         :disabled="busy"
-                        aria-label="Rename collection"
-                        title="Rename collection"
+                        aria-label="Edit collection"
+                        title="Edit collection"
                         class="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-explorer-blue"
                         @click="handleName($event, true)"
                     >
@@ -514,10 +598,12 @@ onUnmounted(() => {
             </div>
             <p
                 v-if="selected"
-                class="mt-3 text-[10px] leading-5 text-slate-400"
+                class="mt-3 text-[11px] leading-6 whitespace-pre-line text-slate-500"
             >
-                Choose a place to explore this collection one stop at a time.
-                Unavailable businesses are hidden.
+                {{
+                    selected.description ||
+                    'Choose a place to explore this collection one stop at a time.'
+                }}
             </p>
             <p
                 v-if="notice"
@@ -556,6 +642,26 @@ onUnmounted(() => {
         >
             {{ mutationError }}
         </p>
+
+        <div
+            v-if="selected && places?.data.length"
+            class="mx-5 mb-4 flex items-center justify-between gap-2"
+        >
+            <span class="text-[10px] text-slate-400">{{
+                arranging
+                    ? 'Move places in your preferred order.'
+                    : 'Your places, in your order.'
+            }}</span>
+            <button
+                type="button"
+                :aria-pressed="arranging"
+                :disabled="busy || loading"
+                class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-explorer-line px-3 text-[11px] font-semibold text-explorer-blue disabled:opacity-40"
+                @click="arranging = !arranging"
+            >
+                <ListOrdered :size="14" />{{ arranging ? 'Done' : 'Reorder' }}
+            </button>
+        </div>
 
         <!-- Each collection contains a bounded page of the consumer's saves. -->
         <template v-if="!selected">
@@ -640,6 +746,44 @@ onUnmounted(() => {
             @select="handleSelect"
             @page-change="load($event)"
         >
+            <template #footer="{ place }">
+                <div
+                    v-if="arranging"
+                    class="flex items-center justify-between gap-2 px-1 pt-1.5"
+                >
+                    <span class="text-[10px] text-slate-400"
+                        >Place {{ placeNumber(place) }}</span
+                    >
+                    <div class="flex gap-1">
+                        <button
+                            type="button"
+                            :aria-label="`Move ${place.name} up`"
+                            :disabled="
+                                busy || loading || placeNumber(place) === 1
+                            "
+                            class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line px-2 text-[10px] text-explorer-blue disabled:opacity-40"
+                            @click="handleMove(place as CollectionPlace, 'up')"
+                        >
+                            <ArrowUp :size="13" /> Move up
+                        </button>
+                        <button
+                            type="button"
+                            :aria-label="`Move ${place.name} down`"
+                            :disabled="
+                                busy ||
+                                loading ||
+                                placeNumber(place) === places.meta.total
+                            "
+                            class="inline-flex h-9 items-center gap-1 rounded-lg border border-explorer-line px-2 text-[10px] text-explorer-blue disabled:opacity-40"
+                            @click="
+                                handleMove(place as CollectionPlace, 'down')
+                            "
+                        >
+                            <ArrowDown :size="13" /> Move down
+                        </button>
+                    </div>
+                </div>
+            </template>
             <template #action="{ place }"
                 ><button
                     type="button"
@@ -679,11 +823,11 @@ onUnmounted(() => {
             @close-auto-focus="handleRestoreFocus"
         >
             <DialogTitle class="font-explorer-heading text-base">{{
-                editing ? 'Rename collection' : 'New collection'
+                editing ? 'Edit collection' : 'New collection'
             }}</DialogTitle>
             <DialogDescription class="text-xs leading-6 text-slate-500">{{
                 editing
-                    ? 'Update the name shown for this collection.'
+                    ? 'Update the name and description shown for this collection.'
                     : 'Give your saved places a little plan. New collections are private.'
             }}</DialogDescription>
             <form class="space-y-4" @submit.prevent="handleSaveName">
@@ -708,6 +852,32 @@ onUnmounted(() => {
                 >
                     {{ form.errors.name || mutationError }}
                 </p>
+                <label
+                    for="collection-description"
+                    class="block text-xs font-semibold"
+                    >Description
+                    <span class="font-normal text-slate-400"
+                        >Optional</span
+                    ></label
+                >
+                <textarea
+                    id="collection-description"
+                    v-model="form.description"
+                    maxlength="500"
+                    rows="3"
+                    placeholder="What makes these places worth exploring?"
+                    :aria-invalid="!!form.errors.description"
+                    aria-describedby="collection-description-error"
+                    class="w-full resize-none rounded-xl border border-explorer-line bg-explorer-cloud px-3 py-2.5 text-xs leading-6 outline-none focus:border-explorer-blue focus:ring-2 focus:ring-blue-100"
+                />
+                <p
+                    v-if="form.errors.description"
+                    id="collection-description-error"
+                    role="alert"
+                    class="text-[11px] text-red-600"
+                >
+                    {{ form.errors.description }}
+                </p>
                 <button
                     type="submit"
                     :disabled="form.processing"
@@ -717,7 +887,7 @@ onUnmounted(() => {
                         form.processing
                             ? 'Saving...'
                             : editing
-                              ? 'Save name'
+                              ? 'Save changes'
                               : 'Create collection'
                     }}
                 </button>

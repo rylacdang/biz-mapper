@@ -107,6 +107,12 @@ onUnmounted(() => cancel?.());
                 >
                     {{ collection.name }}
                 </h1>
+                <p
+                    v-if="collection.description"
+                    class="mt-3 text-xs leading-6 whitespace-pre-line text-slate-500"
+                >
+                    {{ collection.description }}
+                </p>
                 <p class="mt-3 text-xs leading-6 text-slate-500">
                     A shared list of local places. {{ places.meta.total }}
                     {{

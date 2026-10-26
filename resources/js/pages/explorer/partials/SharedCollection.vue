@@ -31,6 +31,12 @@ const emit = defineEmits<{
             >
                 {{ collection.name }}
             </h2>
+            <p
+                v-if="collection.description"
+                class="mt-3 text-xs leading-6 whitespace-pre-line text-slate-500"
+            >
+                {{ collection.description }}
+            </p>
             <p class="mt-2 text-[11px] leading-6 text-slate-500">
                 {{ places.meta.total }} available
                 {{ places.meta.total === 1 ? 'place' : 'places' }}. The map

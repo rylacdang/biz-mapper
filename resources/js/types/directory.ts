@@ -134,6 +134,7 @@ export interface SavedPlacesPage {
 }
 
 export interface PlaceCollection {
+    description: string | null;
     id: number;
     is_public: boolean;
     share_url: string | null;
@@ -158,6 +159,7 @@ export interface CollectionPlacesPage {
 }
 
 export interface PublicCollection {
+    description: string | null;
     name: string;
     share_token: string;
     places_count: number;

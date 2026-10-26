@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['user_id', 'name', 'is_public', 'share_token'])]
+#[Fillable(['user_id', 'name', 'is_public', 'share_token', 'description'])]
 #[UsePolicy(PlaceCollectionPolicy::class)]
 class PlaceCollection extends Model
 {

@@ -36,7 +36,10 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
         return $this->query()->where('share_token', $token)->where('is_public', true)->firstOrFail();
     }
 
-    public function lockForSharing(int $id): PlaceCollection
+    /**
+     * Lock one collection so sharing and ordering writes cannot overlap.
+     */
+    public function lockForChanges(int $id): PlaceCollection
     {
         return $this->query()->lockForUpdate()->findOrFail($id);
     }
@@ -69,11 +72,16 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
         return $this->paginateQuery($query, $page);
     }
 
+    /**
+     * Append new members while leaving duplicate saves in their current position.
+     */
     public function addPlace(int $collectionId, int $savedBusinessId): void
     {
         DB::table('collection_places')->insertOrIgnore([
             'place_collection_id' => $collectionId,
             'saved_business_id' => $savedBusinessId,
+            'position' => (int) DB::table('collection_places')->where('place_collection_id', $collectionId)
+                ->min(DB::raw('COALESCE(position, id)')) - 1,
         ]);
     }
 
@@ -86,6 +94,30 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
     }
 
     /**
+     * Swap neighboring available places; legacy rows use their original membership IDs.
+     */
+    public function movePlace(PlaceCollection $collection, int $savedBusinessId, string $direction): void
+    {
+        $query = $this->collectionPlacesQuery($collection)->reorder()
+            ->without('category')
+            ->select('collection_places.id')
+            ->selectRaw('COALESCE(collection_places.position, collection_places.id) as sort_position');
+        $current = (clone $query)->where('saved_businesses.id', $savedBusinessId)->firstOrFail();
+        $up = $direction === 'up';
+        $neighbor = (clone $query)
+            ->whereRaw('COALESCE(collection_places.position, collection_places.id) '.($up ? '>' : '<').' ?', [$current->sort_position])
+            ->orderByRaw('COALESCE(collection_places.position, collection_places.id) '.($up ? 'ASC' : 'DESC'))
+            ->first();
+
+        if (! $neighbor) {
+            return;
+        }
+
+        DB::table('collection_places')->where('id', $current->id)->update(['position' => $neighbor->sort_position]);
+        DB::table('collection_places')->where('id', $neighbor->id)->update(['position' => $current->sort_position]);
+    }
+
+    /**
      * Share the same owner and availability constraints between private and public members.
      */
     private function collectionPlacesQuery(PlaceCollection $collection): Builder
@@ -93,6 +125,7 @@ class PlaceCollectionRepository extends BaseRepository implements PlaceCollectio
         return $this->availableBusinessesQuery($collection)
             ->join('collection_places', 'collection_places.saved_business_id', '=', 'saved_businesses.id')
             ->where('collection_places.place_collection_id', $collection->id)
+            ->orderByRaw('COALESCE(collection_places.position, collection_places.id) DESC')
             ->orderByDesc('collection_places.id');
     }
 

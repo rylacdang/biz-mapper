@@ -19,7 +19,7 @@ class CollectionSharingService
     public function update(PlaceCollection $collection, bool $public): void
     {
         DB::transaction(function () use ($collection, $public) {
-            $locked = $this->collectionRepo->lockForSharing($collection->id);
+            $locked = $this->collectionRepo->lockForChanges($collection->id);
             $attributes = ['is_public' => $public];
 
             if ($public && ! $locked->share_token) {

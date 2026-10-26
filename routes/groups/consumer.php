@@ -29,5 +29,6 @@ Route::middleware('role:'.UserRole::CONSUMER->value)->prefix('consumer')->name('
 
     Route::get('collections/{collection}/saved-places', [CollectionPlaceController::class, 'index'])->name('collections.places.index');
     Route::post('collections/{collection}/places/{savedBusiness}', [CollectionPlaceController::class, 'store'])->name('collections.places.store');
+    Route::put('collections/{collection}/places/{savedBusiness}/order', [CollectionPlaceController::class, 'update'])->name('collections.places.update');
     Route::delete('collections/{collection}/places/{savedBusiness}', [CollectionPlaceController::class, 'destroy'])->name('collections.places.destroy');
 });
