@@ -131,11 +131,29 @@ const saved = computed(() => Boolean(props.listing));
 const ownerLocation = useExplorerLocation();
 const { error: locationError } = ownerLocation;
 const positionReady = ref(Boolean(props.listing || props.initialLocation));
+const pinOrigin = ref<'saved' | 'suggestion' | 'device' | 'default' | 'manual'>(
+    props.listing ? 'saved' : props.initialLocation ? 'device' : 'default',
+);
+
+const pinHint = computed(() => {
+    switch (pinOrigin.value) {
+        case 'saved':
+            return 'Showing your saved business pin.';
+        case 'suggestion':
+            return 'Starting at the suggested address. Adjust the pin to your entrance.';
+        case 'device':
+            return 'Starting near your location. Move the pin to your business entrance.';
+        case 'manual':
+            return 'Pin adjusted. Your written address stays unchanged.';
+        default:
+            return 'Starting from the default area. Search an address or move the pin to your business.';
+    }
+});
 
 let locationChosen = false;
 let applyingLocation = false;
 
-// A pin move, numeric edit, or address lookup takes priority over device location.
+// An address selection or pin move takes priority over device location.
 watch(
     () => [form.lat, form.lng],
     () => {
@@ -161,6 +179,7 @@ onMounted(() => {
                 applyingLocation = true;
                 form.lat = position.lat;
                 form.lng = position.lng;
+                pinOrigin.value = 'device';
                 applyingLocation = false;
                 positionReady.value = true;
             },
@@ -208,6 +227,7 @@ function handleDialogCancel(event: Event) {
 }
 
 function handleSelectAddress(suggestion: AddressSuggestion) {
+    pinOrigin.value = 'suggestion';
     locationChosen = true;
     positionReady.value = true;
     void address.selectSuggestion(suggestion);
@@ -219,12 +239,8 @@ function handlePlacePin(coords: Coordinates) {
     locationChosen = true;
     form.lat = coords.lat;
     form.lng = coords.lng;
-}
-
-function handleCoordinateInput() {
-    locationChosen = true;
-    positionReady.value = true;
-    address.cancelLookup();
+    pinOrigin.value = 'manual';
+    form.clearErrors('lat', 'lng');
 }
 
 function handleNextStep() {
@@ -853,10 +869,13 @@ function handleDelete() {
                     <p
                         class="mb-[26px] text-[12px] leading-[1.7] text-[#8593a8]"
                     >
-                        Choose an address suggestion, then place the pin exactly
-                        where visitors should go.
+                        Enter your business address, check the details, then
+                        position the pin at the entrance.
                     </p>
 
+                    <h4 class="text-[11px] font-semibold">
+                        1. Enter your business address
+                    </h4>
                     <StreetAddressInput
                         v-model="form.address"
                         :suggestions="suggestions"
@@ -867,102 +886,126 @@ function handleDelete() {
                         @select="handleSelectAddress"
                     />
 
-                    <p
-                        v-if="matchingLocation"
-                        class="mt-4 text-xs text-slate-500"
-                        role="status"
+                    <section
+                        class="mt-6 border-t border-explorer-line pt-5"
+                        aria-label="Address details"
                     >
-                        Filling your region, city, and barangay…
-                    </p>
-
-                    <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-5">
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
+                        <h4 class="text-[11px] font-semibold">
+                            2. Check address details
+                        </h4>
+                        <p class="mt-2 text-[11px] leading-6 text-slate-500">
+                            Matched details fill automatically. Complete or
+                            correct anything missing.
+                        </p>
+                        <p
+                            v-if="matchingLocation"
+                            class="mt-4 text-xs text-slate-500"
+                            role="status"
                         >
-                            Region
-                            <select
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
-                                v-model="form.region_code"
-                                :disabled="matchingLocation"
+                            Filling your region, city, and barangay…
+                        </p>
+
+                        <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
+                            <label
+                                class="flex flex-col gap-2 text-[11px] font-[700]"
                             >
-                                <option value="">Choose region</option>
-
-                                <option
-                                    v-for="item in regions"
-                                    :key="item.code"
-                                    :value="item.code"
+                                Region
+                                <select
+                                    class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                    v-model="form.region_code"
+                                    :disabled="matchingLocation"
                                 >
-                                    {{ item.name }}
-                                </option>
-                            </select>
-                        </label>
+                                    <option value="">Choose region</option>
 
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
-                            v-if="provinces.length"
-                        >
-                            Province
-                            <select
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
-                                v-model="form.province_code"
-                                :disabled="matchingLocation"
+                                    <option
+                                        v-for="item in regions"
+                                        :key="item.code"
+                                        :value="item.code"
+                                    >
+                                        {{ item.name }}
+                                    </option>
+                                </select>
+                            </label>
+
+                            <label
+                                class="flex flex-col gap-2 text-[11px] font-[700]"
+                                v-if="provinces.length"
                             >
-                                <option value="">All / independent city</option>
-
-                                <option
-                                    v-for="item in provinces"
-                                    :key="item.code"
-                                    :value="item.code"
+                                Province
+                                <select
+                                    class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                    v-model="form.province_code"
+                                    :disabled="matchingLocation"
                                 >
-                                    {{ item.name }}
-                                </option>
-                            </select>
-                        </label>
+                                    <option value="">
+                                        All / independent city
+                                    </option>
 
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
-                        >
-                            City / municipality
-                            <select
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
-                                v-model="form.city_code"
-                                :disabled="matchingLocation"
+                                    <option
+                                        v-for="item in provinces"
+                                        :key="item.code"
+                                        :value="item.code"
+                                    >
+                                        {{ item.name }}
+                                    </option>
+                                </select>
+                            </label>
+
+                            <label
+                                class="flex flex-col gap-2 text-[11px] font-[700]"
                             >
-                                <option value="">Choose city</option>
-
-                                <option
-                                    v-for="item in cities"
-                                    :key="item.code"
-                                    :value="item.code"
+                                City / municipality
+                                <select
+                                    class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                    v-model="form.city_code"
+                                    :disabled="matchingLocation"
                                 >
-                                    {{ item.name }}
-                                </option>
-                            </select>
-                        </label>
+                                    <option value="">Choose city</option>
 
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
-                        >
-                            Barangay
-                            <select
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
-                                v-model="form.barangay_code"
-                                :disabled="matchingLocation"
+                                    <option
+                                        v-for="item in cities"
+                                        :key="item.code"
+                                        :value="item.code"
+                                    >
+                                        {{ item.name }}
+                                    </option>
+                                </select>
+                            </label>
+
+                            <label
+                                class="flex flex-col gap-2 text-[11px] font-[700]"
                             >
-                                <option value="">Choose barangay</option>
-
-                                <option
-                                    v-for="item in barangays"
-                                    :key="item.code"
-                                    :value="item.code"
+                                Barangay
+                                <select
+                                    class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-[#f8fafc] p-3 text-[12px] font-[400] text-explorer-ink"
+                                    v-model="form.barangay_code"
+                                    :disabled="matchingLocation"
                                 >
-                                    {{ item.name }}
-                                </option>
-                            </select>
-                        </label>
-                    </div>
+                                    <option value="">Choose barangay</option>
 
-                    <section class="mt-6 space-y-3" aria-label="Business pin">
+                                    <option
+                                        v-for="item in barangays"
+                                        :key="item.code"
+                                        :value="item.code"
+                                    >
+                                        {{ item.name }}
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section
+                        class="mt-6 space-y-3 border-t border-explorer-line pt-5"
+                        aria-label="Business pin"
+                    >
+                        <h4 class="text-[11px] font-semibold">
+                            3. Position the entrance pin <RequiredMark />
+                        </h4>
+                        <p class="text-[11px] leading-6 text-slate-500">
+                            Drag the pin, or tap the map, to mark where visitors
+                            should enter. This pin is used for directions.
+                        </p>
                         <p
                             v-if="addressError"
                             class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
@@ -976,8 +1019,8 @@ function handleDelete() {
                             class="rounded-[8px] bg-[#fff6e6] p-[10px] text-[11px] leading-[1.6] text-[#997432]"
                             role="status"
                         >
-                            {{ locationError }} You can place the business pin
-                            manually.
+                            {{ locationError }} Search an address or place the
+                            pin manually.
                         </p>
 
                         <LocationPicker
@@ -992,43 +1035,48 @@ function handleDelete() {
                             class="flex h-60 items-center justify-center rounded-xl bg-slate-50 text-xs text-slate-500"
                             role="status"
                         >
-                            Finding your location…
+                            Finding a starting point…
+                        </p>
+                        <p
+                            v-if="positionReady"
+                            class="text-[11px] leading-6 text-slate-500"
+                            role="status"
+                        >
+                            {{ pinHint }}
                         </p>
                     </section>
 
-                    <div class="mt-5 grid grid-cols-2 gap-4">
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
+                    <details
+                        v-if="positionReady"
+                        class="mt-4 rounded-xl border border-explorer-line bg-slate-50 px-3 py-2.5"
+                    >
+                        <summary
+                            class="cursor-pointer text-[11px] font-medium text-slate-500"
                         >
-                            <span>Latitude <RequiredMark /></span>
-                            <input
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
-                                v-model.number="form.lat"
-                                type="number"
-                                min="-90"
-                                max="90"
-                                step="any"
-                                required
-                                @input="handleCoordinateInput"
-                            />
-                        </label>
-
-                        <label
-                            class="flex flex-col gap-2 text-[11px] font-[700]"
-                        >
-                            <span>Longitude <RequiredMark /></span>
-                            <input
-                                class="w-full min-w-0 rounded-[9px] border border-[#dfe7f1] bg-slate-50 p-3 text-xs font-normal text-explorer-ink"
-                                v-model.number="form.lng"
-                                type="number"
-                                min="-180"
-                                max="180"
-                                step="any"
-                                required
-                                @input="handleCoordinateInput"
-                            />
-                        </label>
-                    </div>
+                            Location coordinates
+                        </summary>
+                        <p class="mt-2 text-[10px] leading-5 text-slate-400">
+                            Set automatically from the pin.
+                        </p>
+                        <dl class="mt-2 grid grid-cols-2 gap-4 text-[11px]">
+                            <div>
+                                <dt class="text-slate-400">Latitude</dt>
+                                <dd
+                                    class="mt-1 font-medium text-explorer-ink tabular-nums select-all"
+                                >
+                                    {{ Number(form.lat).toFixed(6) }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-slate-400">Longitude</dt>
+                                <dd
+                                    class="mt-1 font-medium text-explorer-ink tabular-nums select-all"
+                                >
+                                    {{ Number(form.lng).toFixed(6) }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </details>
 
                     <p
                         v-for="(message, key) in form.errors"

@@ -101,14 +101,20 @@ async function handleKeydown(event: KeyboardEvent) {
             :aria-activedescendant="
                 expanded && active >= 0 ? `${id}-option-${active}` : undefined
             "
+            :aria-describedby="`${id}-help`"
             autocomplete="off"
             required
             maxlength="500"
-            placeholder="Street, building, or unit"
+            placeholder="House / unit number, building, and street"
             @focus="handleFocus"
             @input="open = true"
             @keydown="handleKeydown"
         />
+
+        <p :id="`${id}-help`" class="mt-2 text-[10px] leading-5 text-slate-400">
+            Suggestions help find the area. You can type your full address if it
+            is not listed.
+        </p>
 
         <!-- Suggestions stay beside the address field, above the remaining form fields. -->
         <div
@@ -163,7 +169,8 @@ async function handleKeydown(event: KeyboardEvent) {
                     class="p-3 text-xs text-slate-500"
                     role="status"
                 >
-                    No matches. Keep typing or place the pin manually.
+                    No matching address. Keep your full address and position the
+                    pin on the map.
                 </p>
                 <p
                     class="border-t border-explorer-line px-3 py-2 text-[10px] text-slate-400"

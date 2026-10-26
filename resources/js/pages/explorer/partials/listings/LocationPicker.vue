@@ -46,7 +46,7 @@ onMounted(() => {
         });
         map.on('error', () => {
             error.value =
-                'Map unavailable. Enter coordinates below to position your business.';
+                'Some map tiles could not load. You can still move the pin.';
         });
         map.addControl(
             new maplibregl.NavigationControl({ showCompass: false }),
@@ -56,11 +56,11 @@ onMounted(() => {
         resize.observe(container.value);
     } catch {
         error.value =
-            'Map unavailable. Enter coordinates below to position your business.';
+            'Map unavailable. Choose an address suggestion to set the pin, or reload to try the map again.';
     }
 });
 
-// Sync an explicit address lookup or numeric edit into the existing marker.
+// Address suggestions and manual pin choices share the same coordinates.
 watch(
     () => [props.lat, props.lng],
     () => {
@@ -79,7 +79,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <!-- Flat location picker; numeric fields in the drawer remain the fallback -->
+    <!-- The pin sets coordinates while the owner keeps their written address. -->
     <div>
         <div
             ref="container"
